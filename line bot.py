@@ -34,7 +34,8 @@ def handle_message(event):
             data = response.json()
             temperature = data["temperature"]
             humidity = data["humidity"]
-            reply_message = f"Temperature: {temperature}°C, Humidity: {humidity}%"
+            #reply_message = f"Temperature: {temperature}°C, Humidity: {humidity}%"  ///Test reply message without esp32
+            reply_message = f"Temperature: 22°C, Humidity: 44%"
         except Exception as e:
             reply_message = "Error fetching data from ESP32."
 
