@@ -25,7 +25,7 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    if event.message.text == "info":
+    if event.message.text == ("info","Info"):
         # Replace with the URL of your ESP32 endpoint
         esp32_url = "http://esp32_ip_address/data"
         
