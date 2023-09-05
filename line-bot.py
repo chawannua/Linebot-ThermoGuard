@@ -27,7 +27,7 @@ def callback():
 def handle_message(event):
     if event.message.text.lower() in ("info", "ข้อมูล"):
         # Replace with the URL of your ESP32 endpoint
-        esp32_url = "http://esp32_ip_address/data"
+        esp32_url = "http://192.168.1.100/data"
         
         try:
             response = requests.get(esp32_url)
