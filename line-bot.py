@@ -12,7 +12,7 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 app = Flask(__name__)
-
+"""
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Sipip freeze > requirements.txtgnature']
@@ -43,6 +43,6 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text=reply_message)
         )
-
+"""
 if __name__ == "__main__":
     app.run()
