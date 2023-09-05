@@ -12,7 +12,7 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 app = Flask(__name__)
-"""
+
 @app.route("/callback", methods=['POST'])
 def callback():
     signature = request.headers['X-Line-Signature']
@@ -20,22 +20,24 @@ def callback():
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        abort(400)
+        abort(401)  # Unauthorized
     return 'OK'
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    if event.message.text == ("info","Info","INFO","ข้อมูล"):
+    if event.message.text.lower() in ("info", "ข้อมูล"):
         # Replace with the URL of your ESP32 endpoint
         esp32_url = "http://esp32_ip_address/data"
         
         try:
             response = requests.get(esp32_url)
-            data = response.json()
-            temperature = data["temperature"]
-            humidity = data["humidity"]
-            #reply_message = f"Temperature: {temperature}°C, Humidity: {humidity}%"  ///Test reply message without esp32
-            reply_message = f"Temperature: 22°C, Humidity: 44%"
+            if response.status_code == 200:
+                data = response.json()
+                temperature = data["temperature"]
+                humidity = data["humidity"]
+                reply_message = f"Temperature: {temperature}°C, Humidity: {humidity}%"
+            else:
+                reply_message = "Error fetching data from ESP32."
         except Exception as e:
             reply_message = "Error fetching data from ESP32."
 
@@ -43,6 +45,6 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text=reply_message)
         )
-"""
+
 if __name__ == "__main__":
     app.run()
