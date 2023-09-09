@@ -1,1 +1,1 @@
-web: node line-bot.js
+web: node index.js
