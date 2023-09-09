@@ -1,51 +1,215 @@
-import requests
-from flask import Flask, request, abort
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+var express = require('express')
+var bodyParser = require('body-parser')
+var request = require('request')
+var app = express()
 
-# Replace with your own values
-LINE_CHANNEL_SECRET = '22550507fb118de47cd3d0fa8153bbe6'
-LINE_CHANNEL_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU='
+var mqtt = require('mqtt');
 
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-handler = WebhookHandler(LINE_CHANNEL_SECRET)
+// Your Channel access token (long-lived) 
+const CH_ACCESS_TOKEN = '';
 
-app = Flask(__name__)
+// MQTT Host
+var mqtt_host = 'mqtt://m15.cloudmqtt.com';
+
+// MQTT Topic
+var mqtt_topic = '/ESP32';
+
+// MQTT Config
+var options = {
+    port: 15443,
+    host: 'mqtt://m15.cloudmqtt.com',
+    clientId: 'mqttjs_' + Math.random().toString(16).substr(2, 8),
+    username: 'mqttuser',
+    password: 'mqttpass',
+    keepalive: 60,
+    reconnectPeriod: 1000,
+    protocolId: 'MQIsdp',
+    protocolVersion: 3,
+    clean: true,
+    encoding: 'utf8'
+};
 
 
-@app.route("/callback", methods=['POST'])
-def callback():
-    signature = request.headers['X-Line-Signature']
-    body = request.get_data(as_text=True)
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(401)  # Unauthorized
-    return 'OK'
+app.use(bodyParser.json())
 
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    if event.message.text.lower() in ("info", "ข้อมูล"):
-        # Replace with the URL of your ESP32 endpoint
-        esp32_url = "http://192.168.1.100/data"
-        
-        try:
-            response = requests.get(esp32_url)
-            if response.status_code == 200:
-                data = response.json()
-                temperature = data["temperature"]
-                humidity = data["humidity"]
-                reply_message = f"Temperature: {temperature}°C, Humidity: {humidity}%"
-            else:
-                reply_message = "Error fetching data from ESP32."
-        except Exception as e:
-            reply_message = "Error fetching data from ESP32."
+app.set('port', (process.env.PORT || 4000))
+app.use(bodyParser.urlencoded({extended: true}))
+app.use(bodyParser.json())
 
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=reply_message)
-        )
+app.post('/webhook', (req, res) => {
+  var text = req.body.events[0].message.text.toLowerCase()
+  var sender = req.body.events[0].source.userId
+  var replyToken = req.body.events[0].replyToken
+  console.log(text, sender, replyToken)
+  console.log(typeof sender, typeof text)
+  // console.log(req.body.events[0])
 
-if __name__ == "__main__":
-    app.run()
+  if (text === 'info' || text === 'รายงาน') {
+    // Info
+    inFo(sender, text)
+  }
+  else if (text === '1' || text === 'เปิด' || text === 'on') {
+    // LED On
+    ledOn(sender, text)
+  }
+  else if (text === '0' || text === 'ปิด' || text === 'off') {
+    // LED Off
+    ledOff(sender, text)
+  }
+  else {
+    // Other
+    sendText(sender, text);
+  }
+
+  res.sendStatus(200)
+})
+
+function sendText (sender, text) {
+  let data = {
+    to: sender,
+    messages: [
+      {
+        type: 'text',
+        text: 'กรุณาพิมพ์ : info | on | off | เปิด | ปิด เท่านั้น'
+      }
+    ]
+  }
+  request({
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer '+CH_ACCESS_TOKEN+''
+    },
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    body: data,
+    json: true
+  }, function (err, res, body) {
+    if (err) console.log('error')
+    if (res) console.log('success')
+    if (body) console.log(body)
+  })
+}
+
+function inFo (sender, text) {
+  let data = {
+    to: sender,
+    messages: [
+      {
+        type: 'text',
+        text: 'uid: '+sender
+      }
+    ]
+  }
+  request({
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer '+CH_ACCESS_TOKEN+''
+    },
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    body: data,
+    json: true
+  }, function (err, res, body) {
+    if (err) console.log('error')
+    if (res) console.log('success')
+    if (body) console.log(body)
+  })
+}
+
+
+function ledOn (sender, text) {
+  var client = mqtt.connect(mqtt_host, options);
+  client.on('connect', function() { // When connected
+      console.log('MQTT connected');
+      // subscribe to a topic
+      client.subscribe(mqtt_topic, function() {
+          // when a message arrives, do something with it
+          client.on('message', function(topic, message, packet) {
+              console.log("Received '" + message + "' on '" + topic + "'");
+          });
+      });
+      
+
+      // publish a message to a topic
+      client.publish(mqtt_topic, 'on', function() {
+          console.log("Message is published");
+          client.end(); // Close the connection when published
+      });
+      
+  });
+    
+
+  let data = {
+    to: sender,
+    messages: [
+      {
+        type: 'text',
+        text: 'LED ON'
+      }
+    ]
+  }
+  request({
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer '+CH_ACCESS_TOKEN+''
+    },
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    body: data,
+    json: true
+  }, function (err, res, body) {
+    if (err) console.log('error')
+    if (res) console.log('success')
+    if (body) console.log(body)
+  })
+}
+
+function ledOff (sender, text) {
+  var client = mqtt.connect(mqtt_host, options);
+  client.on('connect', function() { // When connected
+      console.log('MQTT connected');
+      // subscribe to a topic
+      client.subscribe(mqtt_topic, function() {
+          // when a message arrives, do something with it
+          client.on('message', function(topic, message, packet) {
+              console.log("Received '" + message + "' on '" + topic + "'");
+          });
+      });
+      
+
+      // publish a message to a topic
+      client.publish(mqtt_topic, 'off', function() {
+          console.log("Message is published");
+          client.end(); // Close the connection when published
+      });
+      
+  });
+
+  let data = {
+    to: sender,
+    messages: [
+      {
+        type: 'text',
+        text: 'LED OFF'
+      }
+    ]
+  }
+  request({
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer '+CH_ACCESS_TOKEN+''
+    },
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    body: data,
+    json: true
+  }, function (err, res, body) {
+    if (err) console.log('error')
+    if (res) console.log('success')
+    if (body) console.log(body)
+  })
+}
+
+app.listen(app.get('port'), function () {
+  console.log('run at port', app.get('port'))
+})
