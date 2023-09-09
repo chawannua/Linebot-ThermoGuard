@@ -46,17 +46,17 @@ app.post('/webhook', (req, res) => {
   console.log(typeof sender, typeof text)
   // console.log(req.body.events[0])
 
-  if (text === 'info' || text === 'รายงาน') {
+  if (text === 'info1') {
     // Info
-    inFo(sender, text)
+    inFo1(sender, text)
   }
-  else if (text === '1' || text === 'เปิด' || text === 'on') {
+  else if (text === 'info2') {
     // LED On
-    ledOn(sender, text)
+   inFo2(sender, text)
   }
-  else if (text === '0' || text === 'ปิด' || text === 'off') {
+  else if (text === 'info3') {
     // LED Off
-    ledOff(sender, text)
+    inFo3(sender, text)
   }
   else {
     // Other
@@ -92,7 +92,7 @@ function sendText (sender, text) {
   })
 }
 
-function inFo (sender, text) {
+function inFo1 (sender, text) {
   let data = {
     to: sender,
     messages: [
@@ -119,7 +119,7 @@ function inFo (sender, text) {
 }
 
 
-function ledOn (sender, text) {
+function inFo2 (sender, text) {
   var client = mqtt.connect(mqtt_host, options);
   client.on('connect', function() { // When connected
       console.log('MQTT connected');
@@ -166,7 +166,7 @@ function ledOn (sender, text) {
   })
 }
 
-function ledOff (sender, text) {
+function inFo3 (sender, text) {
   var client = mqtt.connect(mqtt_host, options);
   client.on('connect', function() { // When connected
       console.log('MQTT connected');
