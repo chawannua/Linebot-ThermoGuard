@@ -101,7 +101,7 @@ function data (sender, text) {
     messages: [
       {
         type: 'text',
-        text: 'uid: '+sender
+        text: ' http://thermoguard.spaceac.net/'
       }
     ]
   }
