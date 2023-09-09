@@ -58,7 +58,7 @@ app.post('/webhook', (req, res) => {
   } 
   else if (text === 'website' || text === 'Website') {
     // Help
-    sendText(sender, 'http://thermoguard.spaceac.net/');
+    sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
   }
   else {
     // Other
