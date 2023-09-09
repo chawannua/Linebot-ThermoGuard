@@ -17,7 +17,7 @@ var mqtt_topic = '/ESP32';
 
 // MQTT Config
 var options = {
-    port: 15443,
+    port: 18772,
     host: 'mqtt://m15.cloudmqtt.com',
     clientId: 'mqttjs_' + Math.random().toString(16).substr(2, 8),
 
