@@ -55,6 +55,7 @@ app.post('/webhook', (req, res) => {
     // Send the corresponding command to the MQTT topic
     var command = text === 'data1' || text === 'Data1' ? 'get_data' : text === 'data2' || text === 'Data2' ? 'on' : 'off';
     sendMqttCommand(sender, espDevice, command);
+    sendText(sender, 'Requesting data from ' + espDevice + '...');
   } 
   else if (text === 'website' || text === 'Website') {
     // Help
