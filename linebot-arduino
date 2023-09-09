@@ -57,8 +57,30 @@ void loop() {
   } else {
     // MQTT Topic /ESP32
     client.subscribe("/ESP32");
+    
+    // Check if a condition is met to publish data (replace with your actual condition)
+    if (shouldPublishData()) {
+      // Publish data to the MQTT broker
+      client.publish("/ESP32", "Your Data Here"); // Replace "Your Data Here" with your data
+    }
   }
   client.loop();
+}
+
+bool shouldPublishData() {
+  // Implement your condition here to determine when to publish data.
+  // Return true if data should be published; otherwise, return false.
+  // For example, you might want to publish data periodically or based on sensor readings.
+  // Replace this example with your specific logic.
+  static unsigned long lastPublishTime = 0;
+  const unsigned long publishInterval = 5000; // Publish data every 5 seconds
+
+  if (millis() - lastPublishTime >= publishInterval) {
+    lastPublishTime = millis();
+    return true;
+  }
+
+  return false;
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
