@@ -2,7 +2,11 @@
   "name": "linebot-thermoguard",
   "version": "1.0.0",
   "description": "",
+<<<<<<< HEAD
   "main": "line-bot.js",
+=======
+  "main": "line-bot.js",
+>>>>>>> a2fb0c93fa2b112e110df60c8851fcd2fe6d5f23
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -6,7 +6,11 @@ var app = express()
 var mqtt = require('mqtt');
 
 // Your Channel access token (long-lived) 
+<<<<<<< HEAD
 const CH_ACCESS_TOKEN = '';
+=======
+const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
+>>>>>>> a2fb0c93fa2b112e110df60c8851fcd2fe6d5f23
 
 // MQTT Host
 var mqtt_host = 'mqtt://m15.cloudmqtt.com';
@@ -19,8 +23,13 @@ var options = {
     port: 15443,
     host: 'mqtt://m15.cloudmqtt.com',
     clientId: 'mqttjs_' + Math.random().toString(16).substr(2, 8),
+<<<<<<< HEAD
     username: 'mqttuser',
     password: 'mqttpass',
+=======
+    username: 'wfcsvmqa',
+    password: 'IqpnVbyPDHqi',
+>>>>>>> a2fb0c93fa2b112e110df60c8851fcd2fe6d5f23
     keepalive: 60,
     reconnectPeriod: 1000,
     protocolId: 'MQIsdp',
