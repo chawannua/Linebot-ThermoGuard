@@ -60,15 +60,15 @@ app.post('/webhook', (req, res) => {
   }
   else if (text === 'more data' || text === 'More data') {
     data(sender, text)
-
+  }
   else {
     // Other
     sendText(sender, text);
   }
 
   res.sendStatus(200)
-})
-
+}
+)
 function sendText (sender, text) {
   let data = {
     to: sender,
