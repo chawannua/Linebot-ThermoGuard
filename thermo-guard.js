@@ -241,6 +241,46 @@ function inFo3 (sender, text) {
   })
 }
 
+function requestData(sender, text) {
+  // Publish a "get_data" command to the MQTT topic.
+  var client = mqtt.connect(mqtt_host, options);
+  client.on('connect', function () {
+    console.log('MQTT connected');
+    // Publish a "get_data" command.
+    client.publish(mqtt_topic, 'get_data', function () {
+      console.log("Request for data sent");
+      client.end();
+    });
+  });
+
+  // Send a message to the user indicating that data is being requested.
+  let data = {
+    to: sender,
+    messages: [
+      {
+        type: 'text',
+        text: 'Requesting data from ESP32...'
+      }
+    ]
+  };
+
+  request({
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + CH_ACCESS_TOKEN
+    },
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    body: data,
+    json: true
+  }, function (err, res, body) {
+    if (err) console.log('error');
+    if (res) console.log('success');
+    if (body) console.log(body);
+  });
+}
+
+
 app.listen(app.get('port'), function () {
   console.log('run at port', app.get('port'))
 })
