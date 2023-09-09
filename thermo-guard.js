@@ -72,7 +72,7 @@ function sendText (sender, text) {
     messages: [
       {
         type: 'text',
-        text: 'กรุณาพิมพ์ : info | on | off | เปิด | ปิด เท่านั้น'
+        text: 'Please use only valid command for more info please visit http://thermoguard.spaceac.net/'
       }
     ]
   }
