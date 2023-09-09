@@ -101,7 +101,7 @@ function data (sender, text) {
     messages: [
       {
         type: 'text',
-        text: ' http://thermoguard.spaceac.net/'
+        text: 'Here our website http://thermoguard.spaceac.net/'
       }
     ]
   }
