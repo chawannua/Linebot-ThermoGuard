@@ -46,18 +46,21 @@ app.post('/webhook', (req, res) => {
   console.log(typeof sender, typeof text)
   // console.log(req.body.events[0])
 
-  if (text === 'info1') {
+  if (text === 'info1' || text === 'Info1') {
     // Info
     inFo1(sender, text)
   }
-  else if (text === 'info2') {
+  else if (text === 'info2' || text === 'Info2') {
     // LED On
    inFo2(sender, text)
   }
-  else if (text === 'info3') {
+  else if (text === 'info3' || text === 'Info3') {
     // LED Off
     inFo3(sender, text)
   }
+  else if (text === 'more data' || text === 'More data') {
+    data(sender, text)
+
   else {
     // Other
     sendText(sender, text);
@@ -73,6 +76,32 @@ function sendText (sender, text) {
       {
         type: 'text',
         text: 'Please use only valid command for more info please visit http://thermoguard.spaceac.net/'
+      }
+    ]
+  }
+  request({
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer '+CH_ACCESS_TOKEN+''
+    },
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    body: data,
+    json: true
+  }, function (err, res, body) {
+    if (err) console.log('error')
+    if (res) console.log('success')
+    if (body) console.log(body)
+  })
+}
+
+function data (sender, text) {
+  let data = {
+    to: sender,
+    messages: [
+      {
+        type: 'text',
+        text: 'uid: '+sender
       }
     ]
   }
