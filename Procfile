@@ -1,1 +1,1 @@
-web: python line-bot.py
+web: node line-bot.js
