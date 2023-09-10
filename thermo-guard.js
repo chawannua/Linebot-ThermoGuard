@@ -56,7 +56,7 @@ app.post('/webhook', (req, res) => {
     var command = text === 'data1' || text === 'Data1' ? 'get_data' : text === 'data2' || text === 'Data2' ? 'on' : 'off';
     sendMqttCommand(sender, espDevice, command);
     sendText(sender, 'Send a command to request data from ' + espDevice + '.....');
-    sendText(sender, 'Data from ' + espDevice + 'Temp = 26C, Humidity = 50%', 'UV index = 0.5, PM2.5 = 10','HeatStoke level = safe');
+    sendText(sender, 'Data from ' + espDevice + 'Temp = 26C, Humidity = 50%, UV index = 0.5, PM2.5 = 10,HeatStoke level = safe');
   } 
   else if (text === 'website' || text === 'Website') {
     // Help
