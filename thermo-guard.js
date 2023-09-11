@@ -48,7 +48,7 @@ app.post('/webhook', (req, res) => {
     var command = 'get_data'; // Assuming "get_data" for all data requests
     sendMqttCommand(sender, espDevice, command);
     sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
-  } 
+  }
   else if (text === 'website') {
     // Help
     sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
@@ -108,56 +108,12 @@ function sendMqttCommand(sender, espDevice, command) {
     // Publish the command to the MQTT topic
     client.publish(mqtt_topic + '/' + espDevice, command, function () {
       console.log('Command sent to ' + espDevice + ': ' + command);
-    });
-  });
-
-  // Handle MQTT connection close
-  client.on('close', function () {
-    console.log('MQTT connection closed');
-  });
-
-  // Handle incoming MQTT responses
-  client.on('message', function (topic, message) {
-    // Check if the topic is the one where the response is expected
-    if (topic === mqtt_topic) {
-      // Send the received response as a message to the LINE user
-      let data = {
-        to: sender,
-        messages: [
-          {
-            type: 'text',
-            text: 'Received response from ' + espDevice + ': ' + message.toString(),
-          },
-        ],
-      };
-
-      // Send the message to the user via the LINE API
-      request(
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + CH_ACCESS_TOKEN,
-          },
-          url: 'https://api.line.me/v2/bot/message/push',
-          method: 'POST',
-          body: data,
-          json: true,
-        },
-        function (err, res, body) {
-          if (err) {
-            console.log('Error sending Line message:', err);
-          } else {
-            console.log('Successfully sent Line message:', body);
-          }
-        }
-      );
-
-      // Disconnect the MQTT client after receiving the response
+      // After sending the command, you can disconnect the MQTT client
       client.end();
-    }
+    });
   });
 }
 
 app.listen(app.get('port'), function () {
-  console.log('Server is running on port', app.get('port'));
+  console.log('Node app is running on port', app.get('port'));
 });
