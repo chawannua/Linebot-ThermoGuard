@@ -9,7 +9,7 @@ var mqtt = require('mqtt');
 const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
 
 // MQTT Host
-var mqtt_host = 'mqtt://m15.cloudmqtt.com';
+var mqtt_host = 'driver.cloudmqtt.com';
 
 // MQTT Topic
 var mqtt_topic = '/ESP32';
@@ -17,7 +17,7 @@ var mqtt_topic = '/ESP32';
 // MQTT Config
 var options = {
   port: 18772,
-  host: 'mqtt://m15.cloudmqtt.com',
+  host: 'driver.cloudmqtt.com',
   clientId: 'mqttjs_' + Math.random().toString(16).substr(2, 8),
   username: 'wfcsvmqa',
   password: 'IqpnVbyPDHqi',
