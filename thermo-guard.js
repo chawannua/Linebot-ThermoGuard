@@ -111,6 +111,11 @@ function sendMqttCommand(sender, espDevice, command) {
     });
   });
 
+  // Handle MQTT connection close
+  client.on('close', function () {
+    console.log('MQTT connection closed');
+  });
+
   // Handle incoming MQTT responses
   client.on('message', function (topic, message) {
     // Check if the topic is the one where the response is expected
