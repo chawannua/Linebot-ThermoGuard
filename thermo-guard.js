@@ -12,7 +12,7 @@ const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh
 var mqtt_host = 'mqtts://driver.cloudmqtt.com';
 
 // MQTT Topic
-var mqtt_topic = '/ESP32';
+var mqtt_topic = 'ESP32';
 
 // MQTT Config
 var options = {
@@ -55,8 +55,8 @@ app.post('/webhook', (req, res) => {
     // Send the corresponding command to the MQTT topic
     var command = text === 'data1' || text === 'Data1' ? 'get_data' : text === 'data2' || text === 'Data2' ? 'on' : 'off';
     sendMqttCommand(sender, espDevice, command);
-    //sendText(sender, 'Send a command to request data from ' + espDevice + '.....');
-    sendText(sender, 'Data from ' + espDevice + '\nTemp = 26C\nHumidity = 50%\nUV index = 0.5\nPM2.5 = 10\nHeatStoke level = safe')
+    sendText(sender, 'Send a command to request data from ' + espDevice + '.....');
+    //sendText(sender, 'Data from ' + espDevice + '\nTemp = 26C\nHumidity = 50%\nUV index = 0.5\nPM2.5 = 10\nHeatStoke level = safe')
   } 
   else if (text === 'website' || text === 'Website') {
     // Help
