@@ -47,13 +47,13 @@ app.post('/webhook', (req, res) => {
     // Send the corresponding command to the MQTT topic
     var command = 'get_data'; // Assuming "get_data" for all data requests
     sendMqttCommand(sender, espDevice, command);
+    console.log('Received command:', text);
     sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
-  }
-  else if (text === 'website') {
+  } else if (text === 'website') {
+    console.log('Received command: website'); // เพิ่มบรรทัดนี้
     // Help
     sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
-  }
-  else {
+  } else {
     // Other
     sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
   }
