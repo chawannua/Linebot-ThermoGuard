@@ -9,10 +9,10 @@ var mqtt = require('mqtt');
 const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
 
 // MQTT Host
-var mqtt_host = 'mqtts://driver.cloudmqtt.com';
+var mqtt_host = 'mqtt://driver.cloudmqtt.com';  // Use "mqtt://" for regular MQTT connections
 
 // MQTT Topic
-var mqtt_topic = 'ESP32';
+var mqtt_topic = '/ESP32/response';  // Match the topic where ESP32 sends responses
 
 // MQTT Config
 var options = {
@@ -39,32 +39,23 @@ app.post('/webhook', (req, res) => {
   var text = req.body.events[0].message.text.toLowerCase();
   var sender = req.body.events[0].source.userId;
   var replyToken = req.body.events[0].replyToken;
-  console.log(text, sender, replyToken);
-  console.log(typeof sender, typeof text);
+  console.log('Received Line message:', text, 'from sender:', sender);
 
-  if (text === 'data1' || text === 'Data1' || text === 'data2' || text === 'Data2' || text === 'data3' || text === 'Data3') {
+  if (text === 'data1' || text === 'data2' || text === 'data3') {
     // Determine the target ESP32 based on the received text
-    var espDevice;
-    if (text === 'data1' || text === 'Data1') {
-      espDevice = 'esp32_1';
-    } else if (text === 'data2' || text === 'Data2') {
-      espDevice = 'esp32_2';
-    } else {
-      espDevice = 'esp32_3';
-    }
+    var espDevice = 'esp32_' + text.charAt(text.length - 1);
     // Send the corresponding command to the MQTT topic
-    var command = text === 'data1' || text === 'Data1' ? 'get_data' : text === 'data2' || text === 'Data2' ? 'on' : 'off';
+    var command = 'get_data'; // Assuming "get_data" for all data requests
     sendMqttCommand(sender, espDevice, command);
-    sendText(sender, 'Send a command to request data from ' + espDevice + '.....');
-    //sendText(sender, 'Data from ' + espDevice + '\nTemp = 26C\nHumidity = 50%\nUV index = 0.5\nPM2.5 = 10\nHeatStoke level = safe')
+    sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
   } 
-  else if (text === 'website' || text === 'Website') {
+  else if (text === 'website') {
     // Help
-    sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
+    sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
   }
   else {
     // Other
-    sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to control the ESP32 devices. For more info please visit http://thermoguard.spaceac.net/');
+    sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
   }
 
   res.sendStatus(200);
@@ -93,9 +84,11 @@ function sendText(sender, text) {
       json: true,
     },
     function (err, res, body) {
-      if (err) console.log('error');
-      if (res) console.log('success');
-      if (body) console.log(body);
+      if (err) {
+        console.log('Error sending Line message:', err);
+      } else {
+        console.log('Successfully sent Line message:', body);
+      }
     }
   );
 }
@@ -104,20 +97,24 @@ function sendMqttCommand(sender, espDevice, command) {
   // Create an MQTT client and connect to the broker
   var client = mqtt.connect(mqtt_host, options);
 
-  // Subscribe to the MQTT topic where ESP32 sends responses
+  // Handle MQTT connection errors
+  client.on('error', function (err) {
+    console.error('MQTT error:', err);
+  });
+
+  // Handle MQTT connection success
   client.on('connect', function () {
     console.log('MQTT connected');
-    client.subscribe('/ESP32/response', function (err) {
-      if (!err) {
-        console.log('Subscribed to /ESP32/response');
-      }
+    // Publish the command to the MQTT topic
+    client.publish(mqtt_topic + '/' + espDevice, command, function () {
+      console.log('Command sent to ' + espDevice + ': ' + command);
     });
   });
 
   // Handle incoming MQTT responses
   client.on('message', function (topic, message) {
     // Check if the topic is the one where the response is expected
-    if (topic === '/ESP32/response') {
+    if (topic === mqtt_topic) {
       // Send the received response as a message to the LINE user
       let data = {
         to: sender,
@@ -142,9 +139,11 @@ function sendMqttCommand(sender, espDevice, command) {
           json: true,
         },
         function (err, res, body) {
-          if (err) console.log('error');
-          if (res) console.log('success');
-          if (body) console.log(body);
+          if (err) {
+            console.log('Error sending Line message:', err);
+          } else {
+            console.log('Successfully sent Line message:', body);
+          }
         }
       );
 
@@ -152,13 +151,8 @@ function sendMqttCommand(sender, espDevice, command) {
       client.end();
     }
   });
-
-  // Publish the command to the MQTT topic
-  client.publish(mqtt_topic + '/' + espDevice, command, function () {
-    console.log("Command sent to " + espDevice + ": " + command);
-  });
 }
 
 app.listen(app.get('port'), function () {
-  console.log('run at port', app.get('port'));
+  console.log('Server is running on port', app.get('port'));
 });
