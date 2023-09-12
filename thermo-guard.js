@@ -23,10 +23,12 @@ app.post('/webhook', (req, res) => {
 
   if (text === 'data1' || text === 'data2' || text === 'data3') {
     // Determine the target ESP32 based on the received text
-    const espDevice = 'esp32_' + text.charAt(text.length - 1);
+    const espDevice = 'Device' + text.charAt(text.length - 1);
     // Send the corresponding command to the MQTT topic
     console.log('Received command:', text);
     sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
+    getDataFromGoogleSheet(espDevice, sender);
+
   } else if (text === 'website') {
     console.log('Received command: website');
     // Help
@@ -71,6 +73,22 @@ function sendText(sender, text) {
   );
 }
 
+
+function getDataFromGoogleSheet(DeviceNum, sender) {
+  const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
+  console.log(googleSheetURL);
+  fetch(googleSheetURL)
+    .then((response) => response.text())
+    .then((data) => {
+      const dataArray = data.split('\n').map((row) => row.split(','));
+      const responseText = `Data for ${DeviceNum}: ${dataArray[1][3].replace(/"/g, '')}`;
+      sendText(sender, responseText);
+    })
+    .catch((error) => {
+      console.error(error);
+      sendText(sender, 'Error retrieving data from Google Sheet');
+    });
+}
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
