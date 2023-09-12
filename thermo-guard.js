@@ -19,19 +19,16 @@ app.post('/webhook', (req, res) => {
   const replyToken = req.body.events[0].replyToken;
   console.log('Received Line message:', text, 'from sender:', sender);
 
-  if (text === 'data1' || text === 'data2' || text === 'data3') {
-    // Determine the target DeviceNum based on the received text
-    // const DeviceNum = 'Device' + text.charAt(text.length - 1);
-    console.log('Received command: ', DeviceNum);
-
-    // getDataFromGoogleSheet(DeviceNum, sender);
+  if (text === 'data1') {
+    handleData1(sender);
+  } else if (text === 'data2') {
+    handleData2(sender);
+  } else if (text === 'data3') {
+    handleData3(sender);
   } else if (text === 'website') {
-    console.log('Received command: website');
-    // Help
-    sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
+    handleWebsite(sender);
   } else {
-    // Other
-    sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to retrieve data. For more info, visit http://thermoguard.spaceac.net/');
+    handleOther(sender);
   }
 
   res.sendStatus(200);
@@ -69,22 +66,46 @@ function sendText(sender, text) {
   );
 }
 
-// function getDataFromGoogleSheet(DeviceNum, sender) {
-//   const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
-//   console.log(googleSheetURL);
+function handleData1(sender) {
+  const DeviceNum = 'Device1'; // Customize for 'data1'
+  getDataFromGoogleSheet(DeviceNum, sender);
+}
 
-//   fetch(googleSheetURL)
-//     .then((response) => response.text())
-//     .then((data) => {
-//       const dataArray = data.split('\n').map((row) => row.split(','));
-//       const responseText = `Data for ${DeviceNum}: ${dataArray[1][3].replace(/"/g, '')}`;
-//       sendText(sender, responseText);
-//     })
-//     .catch((error) => {
-//       console.error(error);
-//       sendText(sender, 'Error retrieving data from Google Sheet');
-//     });
-// }
+function handleData2(sender) {
+  const DeviceNum = 'Device2'; // Customize for 'data2'
+  getDataFromGoogleSheet(DeviceNum, sender);
+}
+
+function handleData3(sender) {
+  const DeviceNum = 'Device3'; // Customize for 'data3'
+  getDataFromGoogleSheet(DeviceNum, sender);
+}
+
+function handleWebsite(sender) {
+  console.log('Received command: website');
+  sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
+}
+
+function handleOther(sender) {
+  sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to retrieve data. For more info, visit http://thermoguard.spaceac.net/');
+}
+
+function getDataFromGoogleSheet(DeviceNum, sender) {
+  const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
+  console.log(googleSheetURL);
+
+  fetch(googleSheetURL)
+    .then((response) => response.text())
+    .then((data) => {
+      const dataArray = data.split('\n').map((row) => row.split(','));
+      const responseText = `Data for ${DeviceNum}: ${dataArray[1][3].replace(/"/g, '')}`;
+      sendText(sender, responseText);
+    })
+    .catch((error) => {
+      console.error(error);
+      sendText(sender, 'Error retrieving data from Google Sheet');
+    });
+}
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
