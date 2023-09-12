@@ -87,7 +87,7 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
           break;
         }
         if (index >= 2) {
-          responseText += dataArray[0][index].replace(/"/g,'') + " " + dataArray[1][index].replace(/"/g,'') + "\n";
+          responseText += dataArray[0][index].replace(/"/g,'') + " : " + dataArray[1][index].replace(/"/g,'') + "\n";
         }
       }      
       sendText(sender, responseText);
