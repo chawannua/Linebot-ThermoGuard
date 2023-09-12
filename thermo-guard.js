@@ -14,8 +14,7 @@ const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh
 // MQTT Host
 var mqtt_host = 'mqtt://driver.cloudmqtt.com';  // Use "mqtt://" for regular MQTT connections
 
-// MQTT Topic
-var mqtt_topic = '/ESP32/'+ espDevice;  // Match the topic where ESP32 sends responses
+
 
 // MQTT Config
 var options = {
@@ -63,6 +62,9 @@ app.post('/webhook', (req, res) => {
 
   res.sendStatus(200);
 });
+
+// MQTT Topic
+var mqtt_topic = '/ESP32/'+ espDevice;  // Match the topic where ESP32 sends responses
 
 function sendText(sender, text) {
   let data = {
