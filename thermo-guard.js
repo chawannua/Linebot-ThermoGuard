@@ -5,7 +5,7 @@ const app = express();
 const mqtt = require('mqtt');
 
 // Your Channel access token (long-lived)
-const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
+const CH_ACCESS_TOKEN = 'YOUR_CHANNEL_ACCESS_TOKEN';
 
 // MQTT Host
 const mqtt_host = 'mqtt://driver.cloudmqtt.com';  // Use "mqtt://" for regular MQTT connections
@@ -102,10 +102,10 @@ function sendMqttCommand(sender, espDevice, command) {
   client.on('connect', () => {
     console.log('MQTT connected');
     // MQTT Topic
-    const mqtt_topicc = '/ESP32/' + espDevice;
-    const mqtt_topicr = '/ESP32/response/' + espDevice;
+    const mqtt_topics = '/ESP32/' + espDevice;
+    const mqtt_topicr = '/ESP32/response' + espDevice;
     // Publish the command to the MQTT topic
-    client.publish(mqtt_topic, command, () => {
+    client.publish(mqtt_topics, command, () => {
       console.log('Command sent to ' + espDevice + ': ' + command);
       // After sending the command, you can disconnect the MQTT client
       client.end();
