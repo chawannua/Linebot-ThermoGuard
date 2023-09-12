@@ -81,7 +81,7 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
     .then((response) => response.text())
     .then((data) => {
       const dataArray = data.split('\n').map((row) => row.split(','));
-      var responseText = "Data for " + DeviceNum + ":\n";
+      var responseText = "Data for " + DeviceNum + ":\n\n";
       for (let index = 0; index < dataArray[1].length; index++) {
         if (index > 9) {
           break;
