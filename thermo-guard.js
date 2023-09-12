@@ -6,7 +6,7 @@ var app = express();
 var mqtt = require('mqtt');
 
 // Your Channel access token (long-lived)
-const CH_ACCESS_TOKEN = 'YOUR_LINE_CHANNEL_ACCESS_TOKEN';
+const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
 
 // MQTT Host
 var mqtt_host = 'mqtt://driver.cloudmqtt.com';
