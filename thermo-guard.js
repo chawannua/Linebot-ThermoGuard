@@ -126,6 +126,10 @@ function ledOn(sender, text) {
       ]
   };
   
+  sendLineMessage(data);
+}
+
+  
   sendLineMessage(sender, data); // Pass the sender variable to sendLineMessage
 }
 
