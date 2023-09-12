@@ -25,8 +25,6 @@ app.post('/webhook', (req, res) => {
     // Determine the target ESP32 based on the received text
     const espDevice = 'esp32_' + text.charAt(text.length - 1);
     // Send the corresponding command to the MQTT topic
-    const command = 'get_data'; // Assuming "get_data" for all data requests
-    sendMqttCommand(sender, espDevice, command);
     console.log('Received command:', text);
     sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
   } else if (text === 'website') {
