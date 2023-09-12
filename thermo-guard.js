@@ -129,22 +129,28 @@ function ledOn(sender, text) {
     sendLineMessage(data);
 }
 
+// ...
+
 function ledOff(sender, text) {
-    // Publish an MQTT message to turn off the LED
-    client.publish(mqtt_topic, 'off');
-    
-    let data = {
-        to: sender,
-        messages: [
-            {
-                type: 'text',
-                text: 'LED OFF'
-            }
-        ]
-    };
-    
-    sendLineMessage(data);
+  // Publish an MQTT message to turn off the LED
+  client.publish(mqtt_topic, 'off');
+  
+  let data = {
+      to: sender,
+      messages: [
+          {
+              type: 'text',
+              text: 'LED OFF'
+          }
+      ]
+  };
+  
+  sendLineMessage(sender, data); // Pass the sender variable to sendLineMessage
 }
+
+// ...
+
+
 
 function sendLineMessage(messageData) {
     request({
