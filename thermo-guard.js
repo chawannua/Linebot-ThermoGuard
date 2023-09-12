@@ -22,7 +22,9 @@ app.post('/webhook', (req, res) => {
   if (text === 'data1' || text === 'data2' || text === 'data3') {
     // Determine the target DeviceNum based on the received text
     const DeviceNum = 'Device' + text.charAt(text.length - 1);
-    getDataFromGoogleSheet(DeviceNum, sender);
+    console.log('Received command: ', DeviceNum);
+
+    // getDataFromGoogleSheet(DeviceNum, sender);
   } else if (text === 'website') {
     console.log('Received command: website');
     // Help
