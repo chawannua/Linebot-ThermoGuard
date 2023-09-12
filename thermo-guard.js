@@ -113,21 +113,22 @@ function inFo(sender, text) {
 }
 
 function ledOn(sender, text) {
-    // Publish an MQTT message to turn on the LED
-    client.publish(mqtt_topic, 'on');
-    
-    let data = {
-        to: sender,
-        messages: [
-            {
-                type: 'text',
-                text: 'LED ON'
-            }
-        ]
-    };
-    
-    sendLineMessage(data);
+  // Publish an MQTT message to turn on the LED
+  client.publish(mqtt_topic, 'on');
+  
+  let data = {
+      to: sender,
+      messages: [
+          {
+              type: 'text',
+              text: 'LED ON'
+          }
+      ]
+  };
+  
+  sendLineMessage(sender, data); // Pass the sender variable to sendLineMessage
 }
+
 
 // ...
 
