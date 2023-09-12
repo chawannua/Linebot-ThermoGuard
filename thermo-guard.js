@@ -15,6 +15,7 @@ var mqtt_host = 'mqtt://driver.cloudmqtt.com';
 
 // MQTT Topic
 var mqtt_topic = '/ESP32';
+var mqtt_topic2 = '/ESP32/response';
 
 // MQTT Config
 var options = {
@@ -49,14 +50,17 @@ app.post('/webhook', (req, res) => {
   if (text === 'info' || text === 'รายงาน') {
     // Info
     inFo(sender, text)
+    
   }
   else if (text === '1' || text === 'เปิด' || text === 'on') {
     // LED On
     ledOn(sender, text)
+    init(sender, text)
   }
   else if (text === '0' || text === 'ปิด' || text === 'off') {
     // LED Off
     ledOff(sender, text)
+    init(sender, text)
   }
   else {
     // Other
@@ -165,6 +169,22 @@ function ledOn (sender, text) {
     if (body) console.log(body)
   })
 }
+
+function init() {
+  // Set up MQTT client
+  var client = mqtt.connect(mqtt_host, options);
+  client.on('connect', function() {
+      console.log('MQTT connected');
+      // subscribe to a topic
+      client.subscribe(mqtt_topic, function() {
+          // when a message arrives, do something with it
+          client.on('message', function(topic, message, packet) {
+              console.log("Received '" + message + "' on '" + topic + "'");
+              // Handle incoming MQTT messages here
+              // You can send Line messages here as well
+          });
+      });
+  });
 
 function ledOff (sender, text) {
   var client = mqtt.connect(mqtt_host, options);
