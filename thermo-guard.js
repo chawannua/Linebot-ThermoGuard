@@ -94,7 +94,7 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
     })
     .catch((error) => {
       console.error(error);
-      sendText(sender, 'Error retrieving data from board');
+      sendText(sender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
     });
 }
 
