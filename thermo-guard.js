@@ -126,15 +126,8 @@ function ledOn(sender, text) {
       ]
   };
   
-  sendLineMessage(data);
-}
-
-  
   sendLineMessage(sender, data); // Pass the sender variable to sendLineMessage
 }
-
-
-// ...
 
 function ledOff(sender, text) {
   // Publish an MQTT message to turn off the LED
@@ -176,7 +169,6 @@ function sendLineMessage(messageData) {
     });
 }
 
-// Start the Express.js server
 app.listen(app.get('port'), function () {
-    console.log('App is running on port', app.get('port'));
+  console.log('App is running on port', app.get('port'));
 });
