@@ -15,7 +15,6 @@ var mqtt_host = 'mqtt://driver.cloudmqtt.com';
 
 // MQTT Topic
 var mqtt_topic = '/ESP32';
-var mqtt_topic2 = '/ESP32/response';
 
 // MQTT Config
 var options = {
@@ -182,6 +181,15 @@ function init() {
               console.log("Received '" + message + "' on '" + topic + "'");
               // Handle incoming MQTT messages here
               // You can send Line messages here as well
+              let data = {
+                to: sender,
+                messages: [
+                  {
+                    type: 'text',
+                    text: message
+                  }
+                ]
+              }
           });
       });
   });
