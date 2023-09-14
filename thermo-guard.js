@@ -21,7 +21,7 @@ app.post('/webhook', (req, res) => {
   const replyToken = req.body.events[0].replyToken;
   console.log('Received Line message:', text, 'from sender:', sender);
 
-  if (text === 'data1' || text === 'data2' || text === 'data3') {
+  if (text === 'system1' || text === 'system2' || text === 'system3') {
     // Determine the target ESP32 based on the received text
     const espDevice = 'Device' + text.charAt(text.length - 1);
     // Send the corresponding command to the MQTT topic
