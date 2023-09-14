@@ -32,7 +32,7 @@ app.post('/webhook', (req, res) => {
   } else if (text === 'website') {
     console.log('Received command: website');
     // Help
-    sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
+    sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
   } else {
     // Other
     sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
