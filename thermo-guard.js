@@ -41,6 +41,11 @@ app.post('/webhook', (req, res) => {
     CheckForRiskLvlChanges('Device3');
     // Add more devices as needed
     sendText(sender, 'Checking for risk level changes...');
+    if (RiskLvlIndex === -1) {
+      sendText(globalSender, 'There no data at the moment ' + DeviceNum);
+      return;
+    }
+
   } else {
     // Other
     sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
@@ -122,19 +127,19 @@ function RiskLvlChecker(DeviceNum) {
       const headers = dataArray[0].map((header) => header.replace(/"/g, ''));
 
       // Find the index of the "Column 10" header
-      const column10Index = headers.indexOf('J');
+      const RiskLvlIndex = headers.indexOf('RiskLV');
 
-      if (column10Index === -1) {
-        sendText(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
+      if (RiskLvlIndex === -1) {
+        console.log(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
         return;
       }
 
       const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
-      const oldValue = dataArray[2][column10Index];
+      const oldValue = dataArray[2][RiskLvlIndex];
 
-      if (newData[column10Index] !== oldValue) {
+      if (newData[RiskLvlIndex] !== oldValue) {
         // Value in Column 10 has changed
-        const newValue = newData[column10Index];
+        const newValue = newData[RiskLvlIndex];
         const change = parseInt(newValue) - parseInt(oldValue);
 
         // ... (previous code)
