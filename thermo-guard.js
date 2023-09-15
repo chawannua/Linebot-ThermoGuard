@@ -166,7 +166,7 @@ function RiskLvlChecker(DeviceNum) {
     .then((response) => response.text())
     .then((data) => {
       const dataArray = data.split('\n').map((row) => row.split(','));
-      dataArray[1][9];
+      // dataArray[1][9];
       console.log(dataArray[1][9]);
 
       // Find the index of the "RiskLV" header
