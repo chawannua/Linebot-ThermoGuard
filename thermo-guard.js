@@ -122,7 +122,7 @@ function RiskLvlChecker(DeviceNum) {
       const headers = dataArray[0].map((header) => header.replace(/"/g, ''));
 
       // Find the index of the "Column 10" header
-      const column10Index = headers.indexOf('Column 10');
+      const column10Index = headers.indexOf('J');
 
       if (column10Index === -1) {
         sendText(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
