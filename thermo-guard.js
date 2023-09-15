@@ -168,10 +168,10 @@ function RiskLvlChecker(DeviceNum) {
       // Find the index of the "Column 10" header
       const RiskLvlIndex = headers.indexOf('RiskLV');
 
-      if (RiskLvlIndex === -1) {
-        console.log(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
-        return;
-      }
+      //if (RiskLvlIndex === -1) {
+        //console.log(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
+        //return;
+     // }
 
       const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
       const oldValue = dataArray[2][RiskLvlIndex];
