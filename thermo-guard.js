@@ -45,7 +45,7 @@ app.post('/webhook', (req, res) => {
     sendText(sender, notificationMessage);
     
   } else if (text === 'test') {
-  TextAll(texttoall,'test message');
+  TextAll(text,'test message');
   
   } else {
     // Other
@@ -60,7 +60,7 @@ function TextAll(text) {
     messages: [
       {
         type: 'text',
-        text: texttoall,
+        text: text,
       },
     ],
   };
