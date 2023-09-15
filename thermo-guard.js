@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const request = require('request');
 const app = express();
 const checkInterval = 60000; // 1 minute
+let globalSender; // Define a global variable to store the sender
 
 // Your Channel access token (long-lived)
 const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
@@ -13,19 +14,12 @@ app.set('port', process.env.PORT || 4000);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Maintain an array to store user IDs (senders) who have added your Line Official Account
-const users = [];
-
 app.post('/webhook', (req, res) => {
   const text = req.body.events[0].message.text.toLowerCase();
   const sender = req.body.events[0].source.userId;
+  globalSender = sender; // Store the sender in the global variable
   const replyToken = req.body.events[0].replyToken;
   console.log('Received Line message:', text, 'from sender:', sender);
-
-  // Check if the user added your Line Official Account and add their sender ID to the 'users' array
-  if (req.body.events[0].type === 'follow' && !users.includes(sender)) {
-    users.push(sender);
-  }
 
   if (text === 'system1' || text === 'system2' || text === 'system3') {
     // Determine the target ESP32 based on the received text
@@ -33,24 +27,23 @@ app.post('/webhook', (req, res) => {
     // Send the corresponding command to the MQTT topic
     console.log('Received command:', text);
     sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
-    getDataFromGoogleSheet(espDevice, sender);
+    getDataFromGoogleSheet(espDevice);
 
   } else if (text === 'website') {
     console.log('Received command: website');
-    // Website
+    //website
     sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
 
   } else if (text === 'risk level' || text === 'risklevel' || text === 'risk') {
     console.log('Received command: risk level');
-    // Call RiskLvlChecker for each device and provide the correct device name as the first argument
-    RiskLvlChecker('Device1');
-    RiskLvlChecker('Device2');
-    RiskLvlChecker('Device3');
+    CheckForRiskLvlChanges('Device1');
+    CheckForRiskLvlChanges('Device2');
+    CheckForRiskLvlChanges('Device3');
     // Add more devices as needed
     sendText(sender, 'Checking for risk level changes...');
   } else {
     // Other
-    sendText(sender, 'Please use the menu command or "system1," "system2," "system3," or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
+    sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
   }
 
   res.sendStatus(200);
@@ -88,7 +81,7 @@ function sendText(sender, text) {
   );
 }
 
-function getDataFromGoogleSheet(DeviceNum, sender) {
+function getDataFromGoogleSheet(DeviceNum) {
   const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
   console.log(googleSheetURL);
   fetch(googleSheetURL)
@@ -104,11 +97,11 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
           responseText += dataArray[0][index].replace(/"/g,'') + " : " + dataArray[1][index].replace(/"/g,'') + "\n";
         }
       }
-      sendText(sender, responseText);
+      sendText(globalSender, responseText);
     })
     .catch((error) => {
       console.error(error);
-      sendText(sender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
+      sendText(globalSender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
     });
 }
 
@@ -132,7 +125,7 @@ function RiskLvlChecker(DeviceNum) {
       const column10Index = headers.indexOf('Column 10');
 
       if (column10Index === -1) {
-        sendText(sender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
+        sendText(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
         return;
       }
 
@@ -143,42 +136,39 @@ function RiskLvlChecker(DeviceNum) {
         // Value in Column 10 has changed
         const newValue = newData[column10Index];
         const change = parseInt(newValue) - parseInt(oldValue);
-        
+
+        // ... (previous code)
+
         let notificationMessage = '';
 
         if (change === 1) {
-          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม');
+          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม')
         } else if (change === 2) {
-          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม');
-        } else if (change === 3) {
-          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต');
+          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม')
+        }
+        else if (change === 3) {
+          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต')
         }
 
         if (notificationMessage) {
-          // Send the notification message to all users who added your Line Official Account
-          users.forEach((user) => {
-            sendText(user, notificationMessage + ' From ' + DeviceNum);
-          });
+          sendText(globalSender, notificationMessage + ' From ' + DeviceNum);
         }
       } else {
         // Value in Column 10 has not changed
-        console.log('No change in data in Column 10 for ' + DeviceNum);
+        sendText(globalSender, 'No change in data in Column 10 for ' + DeviceNum);
       }
     })
     .catch((error) => {
       console.error(error);
-      // Send an error message to all users who added your Line Official Account
-      users.forEach((user) => {
-        sendText(user, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
-      });
+      sendText(globalSender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
     });
 }
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
-  // Schedule the initial check for risk level changes for each device with a sender
-  CheckForRiskLvlChanges('Device1', sender);
-  CheckForRiskLvlChanges('Device2', sender);
-  CheckForRiskLvlChanges('Device3', sender);
+  // Start checking for risk level changes initially
+  CheckForRiskLvlChanges('Device1');
+  CheckForRiskLvlChanges('Device2');
+  CheckForRiskLvlChanges('Device3');
   // Add more devices as needed
 });
