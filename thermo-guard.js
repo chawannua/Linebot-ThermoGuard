@@ -176,9 +176,9 @@ function RiskLvlChecker(DeviceNum) {
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
-  // Schedule the initial check for risk level changes for each device
-  CheckForRiskLvlChanges('Device1');
-  CheckForRiskLvlChanges('Device2');
-  CheckForRiskLvlChanges('Device3');
+  // Schedule the initial check for risk level changes for each device with a sender
+  CheckForRiskLvlChanges('Device1', sender);
+  CheckForRiskLvlChanges('Device2', sender);
+  CheckForRiskLvlChanges('Device3', sender);
   // Add more devices as needed
 });
