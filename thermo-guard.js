@@ -4,11 +4,8 @@ const request = require('request');
 const app = express();
 const checkInterval = 60000; // 1 minute
 
-
 // Your Channel access token (long-lived)
 const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
-
-
 
 app.use(bodyParser.json());
 
@@ -16,11 +13,19 @@ app.set('port', process.env.PORT || 4000);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+// Maintain an array to store user IDs (senders) who have added your Line Official Account
+const users = [];
+
 app.post('/webhook', (req, res) => {
   const text = req.body.events[0].message.text.toLowerCase();
   const sender = req.body.events[0].source.userId;
   const replyToken = req.body.events[0].replyToken;
   console.log('Received Line message:', text, 'from sender:', sender);
+
+  // Check if the user added your Line Official Account and add their sender ID to the 'users' array
+  if (req.body.events[0].type === 'follow' && !users.includes(sender)) {
+    users.push(sender);
+  }
 
   if (text === 'system1' || text === 'system2' || text === 'system3') {
     // Determine the target ESP32 based on the received text
@@ -32,17 +37,20 @@ app.post('/webhook', (req, res) => {
 
   } else if (text === 'website') {
     console.log('Received command: website');
-    //website
+    // Website
     sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
 
   } else if (text === 'risk level' || text === 'risklevel' || text === 'risk') {
     console.log('Received command: risk level');
-    CheckForRiskLvlChanges(espDevice, sender);
+    // Call RiskLvlChecker for each device and provide the correct device name as the first argument
+    RiskLvlChecker('Device1');
+    RiskLvlChecker('Device2');
+    RiskLvlChecker('Device3');
+    // Add more devices as needed
     sendText(sender, 'Checking for risk level changes...');
-  }
-    else {
+  } else {
     // Other
-    sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
+    sendText(sender, 'Please use the menu command or "system1," "system2," "system3," or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
   }
 
   res.sendStatus(200);
@@ -80,7 +88,6 @@ function sendText(sender, text) {
   );
 }
 
-
 function getDataFromGoogleSheet(DeviceNum, sender) {
   const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
   console.log(googleSheetURL);
@@ -105,20 +112,14 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
     });
 }
 
-function CheckForRiskLvlChanges() {
+function CheckForRiskLvlChanges(DeviceNum) {
   // Call RiskLvlChecker for each device and provide the correct device name as the first argument
-  RiskLvlChecker('Device1', sender);
-  RiskLvlChecker('Device2', sender);
-  RiskLvlChecker('Device3', sender);
-  // Add more devices as needed
-
+  RiskLvlChecker(DeviceNum);
   // Schedule the next check
-  setTimeout(CheckForRiskLvlChanges, checkInterval);
+  setTimeout(() => CheckForRiskLvlChanges(DeviceNum), checkInterval);
 }
 
-
-
-function RiskLvlChecker(DeviceNum, sender) {
+function RiskLvlChecker(DeviceNum) {
   const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
   console.log(googleSheetURL);
   fetch(googleSheetURL)
@@ -142,34 +143,42 @@ function RiskLvlChecker(DeviceNum, sender) {
         // Value in Column 10 has changed
         const newValue = newData[column10Index];
         const change = parseInt(newValue) - parseInt(oldValue);
-
+        
         let notificationMessage = '';
 
         if (change === 1) {
-          notificationMessage = ('level change from' + newValue + 'to' + oldValue + 'เริ่มมีอันตรายโปรดระมัดระวังในการทำกิจกรรม')
+          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม');
         } else if (change === 2) {
-          notificationMessage = ('level change from' + newValue + 'to' + oldValue + 'อันตรายเพิ่มขึ้นโปรดระมัดระวังในการทำกิจกรรม')
+          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม');
+        } else if (change === 3) {
+          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต');
         }
-        else if (change === 3) {
-          notificationMessage =('level change from' + newValue + 'to' + oldValue + 'อันตรายมากๆโปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต')
-        }
-        
 
         if (notificationMessage) {
-          sendText(sender, notificationMessage + ' From ' + DeviceNum);
+          // Send the notification message to all users who added your Line Official Account
+          users.forEach((user) => {
+            sendText(user, notificationMessage + ' From ' + DeviceNum);
+          });
         }
       } else {
         // Value in Column 10 has not changed
-        sendText(sender, 'No change in data in Column 10 for ' + DeviceNum);
+        console.log('No change in data in Column 10 for ' + DeviceNum);
       }
     })
     .catch((error) => {
       console.error(error);
-      sendText(sender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
+      // Send an error message to all users who added your Line Official Account
+      users.forEach((user) => {
+        sendText(user, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
+      });
     });
 }
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
-  CheckForRiskLvlChanges();
-})
+  // Schedule the initial check for risk level changes for each device
+  CheckForRiskLvlChanges('Device1');
+  CheckForRiskLvlChanges('Device2');
+  CheckForRiskLvlChanges('Device3');
+  // Add more devices as needed
+});
