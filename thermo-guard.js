@@ -194,7 +194,7 @@ function RiskLvlChecker(DeviceNum) {
         }
 
         if (notificationMessage) {
-          TextAll(notificationMessage + ' From ' + DeviceNum);
+          TextAll(notificationMessage, globalSender); // Provide both arguments here
         }
       }
     })
@@ -203,6 +203,7 @@ function RiskLvlChecker(DeviceNum) {
       sendText(globalSender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
     });
 }
+
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
