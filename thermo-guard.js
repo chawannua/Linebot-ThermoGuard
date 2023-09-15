@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const app = express();
+const checkInterval = 60000; // 1 minute
 
 
 // Your Channel access token (long-lived)
@@ -31,11 +32,17 @@ app.post('/webhook', (req, res) => {
 
   } else if (text === 'website') {
     console.log('Received command: website');
-    // Help
+    //website
     sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
-  } else {
+
+  } else if (text === 'risk level' || text === 'risklevel' || text === 'risk') {
+    console.log('Received command: risk level');
+    CheckForRiskLvlChanges(espDevice, sender);
+    sendText(sender, 'Checking for risk level changes...');
+  }
+    else {
     // Other
-    sendText(sender, 'Please use the menu command or "system1," "system2," or "system3" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
+    sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
   }
 
   res.sendStatus(200);
@@ -98,6 +105,70 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
     });
 }
 
+function checkForChanges() {
+  // Call getDataFromGoogleSheet for each device
+  getDataFromGoogleSheet('Device1', sender1);
+  getDataFromGoogleSheet('Device2', sender2);
+  getDataFromGoogleSheet('Device3', sender3);
+  // Add more devices as needed
+
+  // Schedule the next check
+  setTimeout(RiskLvlChecker, checkInterval);
+}
+
+
+function RiskLvlChecker(DeviceNum, sender) {
+  const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
+  console.log(googleSheetURL);
+  fetch(googleSheetURL)
+    .then((response) => response.text())
+    .then((data) => {
+      const dataArray = data.split('\n').map((row) => row.split(','));
+      const headers = dataArray[0].map((header) => header.replace(/"/g, ''));
+
+      // Find the index of the "Column 10" header
+      const column10Index = headers.indexOf('Column 10');
+
+      if (column10Index === -1) {
+        sendText(sender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
+        return;
+      }
+
+      const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
+      const oldValue = dataArray[2][column10Index];
+
+      if (newData[column10Index] !== oldValue) {
+        // Value in Column 10 has changed
+        const newValue = newData[column10Index];
+        const change = parseInt(newValue) - parseInt(oldValue);
+
+        let notificationMessage = '';
+
+        if (change === 1) {
+          notificationMessage = ('level change from' + newValue + 'to' + oldValue + 'เริ่มมีอันตรายโปรดระมัดระวังในการทำกิจกรรม')
+        } else if (change === 2) {
+          notificationMessage = ('level change from' + newValue + 'to' + oldValue + 'อันตรายเพิ่มขึ้นโปรดระมัดระวังในการทำกิจกรรม')
+        }
+        else if (change === 3) {
+          notificationMessage =('level change from' + newValue + 'to' + oldValue + 'อันตรายมากๆโปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต')
+        }
+        
+
+        if (notificationMessage) {
+          sendText(sender, notificationMessage + ' From ' + DeviceNum);
+        }
+      } else {
+        // Value in Column 10 has not changed
+        sendText(sender, 'No change in data in Column 10 for ' + DeviceNum);
+      }
+    })
+    .catch((error) => {
+      console.error(error);
+      sendText(sender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
+    });
+}
+
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
-});
+  CheckForRiskLvlChanges();
+})
