@@ -91,7 +91,7 @@ function TextAll(broadcast, text) {
       },
     ],
   };
-
+}
 
 function sendText(sender, text) {
   const data = {
