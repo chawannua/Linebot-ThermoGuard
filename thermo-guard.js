@@ -206,6 +206,7 @@ function RiskLvlChecker(DeviceNum) {
 }
 
 function sendBroadcastToUser(userId, text) {
+  console.log('Broadcast message sent successfully:', body);
   const data = {
     messages: [
       {
