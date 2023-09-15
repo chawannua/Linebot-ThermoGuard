@@ -107,9 +107,9 @@ function getDataFromGoogleSheet(DeviceNum, sender) {
 
 function CheckForRiskLvlChanges() {
   // Call getDataFromGoogleSheet for each device
-  RiskLvlChecker('DeviceNum', sender);
-  RiskLvlChecker('DeviceNum', sender);
-  RiskLvlChecker('DeviceNum', sender);
+  RiskLvlChecker(DeviceNum, sender);
+  RiskLvlChecker(DeviceNum, sender);
+  RiskLvlChecker(DeviceNum, sender);
   // Add more devices as needed
 
   // Schedule the next check
