@@ -76,15 +76,15 @@ function TextAll(text) {
     json: data,
   };
 
-  const requestData = {
-    to: ['@all'], // Send the broadcast message to all users
-    messages: [
-      {
-        type: 'text',
-        text: text,
-      },
-    ],
-  };
+  //const requestData = {
+  //  to: ['@all'], // Send the broadcast message to all users
+  // messages: [
+  //    {
+  //      type: 'text',
+  //      text: text,
+  //    },
+  //  ],
+  //};
 
   request(options, (error, response, body) => {
     if (!error && response.statusCode === 200) {
@@ -204,6 +204,16 @@ function RiskLvlChecker(DeviceNum) {
     });
 }
 
+function sendBroadcastToUser(userId, text) {
+  const data = {
+    messages: [
+      {
+        type: 'text',
+        text: text,
+      },
+    ],
+  };}
+
 
 app.listen(app.get('port'), () => {
   console.log('Node app is running on port', app.get('port'));
@@ -212,4 +222,5 @@ app.listen(app.get('port'), () => {
   CheckForRiskLvlChanges('Device2');
   CheckForRiskLvlChanges('Device3');
   // Add more devices as needed
+  sendBroadcastToUser('Ud61051a9f069c83edeb9b887dcf9d78f', 'This is a test broadcast message to a single user.');
 });
