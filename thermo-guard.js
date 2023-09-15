@@ -76,6 +76,16 @@ function TextAll(text) {
     json: data,
   };
 
+  const requestData = {
+    to: ['@all'], // Send the broadcast message to all users
+    messages: [
+      {
+        type: 'text',
+        text: text,
+      },
+    ],
+  };
+
   request(options, (error, response, body) => {
     if (!error && response.statusCode === 200) {
       console.log('Broadcast message sent successfully:', body);
