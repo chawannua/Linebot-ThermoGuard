@@ -35,7 +35,7 @@ app.post('/webhook', (req, res) => {
     sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
   } else {
     // Other
-    sendText(sender, 'Please use the menu command or "data1," "data2," or "data3" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
+    sendText(sender, 'Please use the menu command or "system1," "system2," or "system3" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
   }
 
   res.sendStatus(200);
