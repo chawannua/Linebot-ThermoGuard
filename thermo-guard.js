@@ -113,8 +113,9 @@ function CheckForRiskLvlChanges() {
   // Add more devices as needed
 
   // Schedule the next check
-  setTimeout(RiskLvlChecker, checkInterval);
+  setTimeout(CheckForRiskLvlChanges, checkInterval);
 }
+
 
 
 function RiskLvlChecker(DeviceNum, sender) {
