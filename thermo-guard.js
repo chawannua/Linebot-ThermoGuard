@@ -46,6 +46,7 @@ app.post('/webhook', (req, res) => {
     
   } else if (text === 'test') {
   TextAll(text,'test message');
+  sendBroadcastToUser('Ud61051a9f069c83edeb9b887dcf9d78f', 'This is a test broadcast message to a single user.');
   
   } else {
     // Other
@@ -222,5 +223,4 @@ app.listen(app.get('port'), () => {
   CheckForRiskLvlChanges('Device2');
   CheckForRiskLvlChanges('Device3');
   // Add more devices as needed
-  sendBroadcastToUser('Ud61051a9f069c83edeb9b887dcf9d78f', 'This is a test broadcast message to a single user.');
 });
