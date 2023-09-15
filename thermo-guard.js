@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const app = express();
+var olddata = 0;
 const checkInterval = 60000; // 1 minute
 let globalSender; // Define a global variable to store the sender
 
@@ -165,40 +166,68 @@ function RiskLvlChecker(DeviceNum) {
   fetch(googleSheetURL)
     .then((response) => response.text())
     .then((data) => {
+
+      
       const dataArray = data.split('\n').map((row) => row.split(','));
       console.log(dataArray[1][9] + " " + DeviceNum);
-
-      // Find the index of the "RiskLV" header
-      const RiskLvlIndex = headers.indexOf('RiskLV');
-
-      if (RiskLvlIndex === -1) {
-        sendText(globalSender, 'Column RiskLV not found in Google Sheet for ' + DeviceNum);
-        return;
-      }
-
-      const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
-      const oldValue = dataArray[2][RiskLvlIndex];
-
-      if (newData[RiskLvlIndex] !== oldValue) {
-        // Value in "RiskLV" column has changed
-        const newValue = newData[RiskLvlIndex];
-        const change = parseInt(newValue) - parseInt(oldValue);
-
-        let notificationMessage = '';
-
-        if (change === 1) {
-          notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม';
-        } else if (change === 2) {
-          notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม';
-        } else if (change === 3) {
-          notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต';
-        }
-
-        if (notificationMessage) {
+      const theval = dataArray[1][9].replace(/"/g, '');
+      
+      if (theval !== olddata) {
+        console.log("changed");
+        olddata = theval;
+        var textdatalv = parseInt(theval);
+        if (textdatalv >= 5) {
+          notificationMessage = 'Level change from ' + theval + ' to ' + olddata + ' test funni';
           TextAll(notificationMessage, globalSender); // Provide both arguments here
         }
+
+        
+        
+        // if (textdatalv == 1) {
+        //   notificationMessage = 'Level change from ' + textdatalv + ' to ' + olddata + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม';
+        // } else if (textdatalv == 2) {
+        //   notificationMessage = 'Level change from ' + textdatalv + ' to ' + olddata + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม';
+        // } else if (textdatalv == 3) {
+        //   notificationMessage = 'Level change from ' + textdatalv + ' to ' + olddata + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต';
+        // }
       }
+
+      // Old code
+      // const dataArray = data.split('\n').map((row) => row.split(','));
+      
+
+      // // Find the index of the "RiskLV" header
+      // const RiskLvlIndex = headers.indexOf('RiskLV');
+
+      // if (RiskLvlIndex === -1) {
+      //   sendText(globalSender, 'Column RiskLV not found in Google Sheet for ' + DeviceNum);
+      //   return;
+      // }
+
+      // const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
+      // const oldValue = newData;
+
+      // if (newData[RiskLvlIndex] !== oldValue) {
+      //   // Value in "RiskLV" column has changed
+      //   const newValue = newData[RiskLvlIndex];
+      //   const change = parseInt(newValue) - parseInt(oldValue);
+
+      //   let notificationMessage = '';
+        
+      //   if (change === 1) {
+      //     notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม';
+      //   } else if (change === 2) {
+      //     notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม';
+      //   } else if (change === 3) {
+      //     notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต';
+      //   }
+
+      //   if (notificationMessage) {
+      //     TextAll(notificationMessage, globalSender); // Provide both arguments here
+      //   }
+      // }
     })
+  
     .catch((error) => {
       console.error(error);
       sendText(globalSender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
