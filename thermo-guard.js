@@ -7,6 +7,33 @@ let globalSender; // Define a global variable to store the sender
 
 // Your Channel access token (long-lived)
 const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
+const LINE_RETRY_KEY = 'your_retry_key'; // Generate a unique UUID
+
+
+
+const requestData = {
+  broadcast,
+};
+
+const options = {
+  url: 'https://api.line.me/v2/bot/message/broadcast',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+    'X-Line-Retry-Key': LINE_RETRY_KEY,
+  },
+  json: requestData,
+};
+
+request(options, (error, response, body) => {
+  if (!error && response.statusCode === 200) {
+    console.log('Broadcast message sent successfully:', body);
+  } else {
+    console.error('Error sending broadcast message:', error);
+  }
+});
+
 
 app.use(bodyParser.json());
 
@@ -53,6 +80,18 @@ app.post('/webhook', (req, res) => {
 
   res.sendStatus(200);
 });
+
+function TextAll(broadcast, text) {
+  const data = {
+    to: broadcast,
+    messages: [
+      {
+        type: 'text',
+        text: text,
+      },
+    ],
+  };
+
 
 function sendText(sender, text) {
   const data = {
@@ -156,11 +195,8 @@ function RiskLvlChecker(DeviceNum) {
         }
 
         if (notificationMessage) {
-          sendText(globalSender, notificationMessage + ' From ' + DeviceNum);
+          TextAll(broadcast, notificationMessage + ' From ' + DeviceNum);
         }
-      } else {
-        // Value in Column 10 has not changed
-        sendText(globalSender, 'No change in data in Column 10 for ' + DeviceNum);
       }
     })
     .catch((error) => {
