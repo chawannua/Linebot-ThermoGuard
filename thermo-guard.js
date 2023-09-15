@@ -43,10 +43,10 @@ app.post('/webhook', (req, res) => {
     // Add more devices as needed
     sendText(sender, 'Checking for risk level changes...');
     sendText(sender, notificationMessage);
-
-    else if (text === 'test') {
-      TextAll('test');
-      
+    
+  } else if (text === 'test') {
+  TextAll('test message');
+  
   } else {
     // Other
     sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
