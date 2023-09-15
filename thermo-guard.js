@@ -9,32 +9,6 @@ let globalSender; // Define a global variable to store the sender
 const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
 const LINE_RETRY_KEY = 'your_retry_key'; // Generate a unique UUID
 
-
-
-const requestData = {
-  broadcast,
-};
-
-const options = {
-  url: 'https://api.line.me/v2/bot/message/broadcast',
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
-    'X-Line-Retry-Key': LINE_RETRY_KEY,
-  },
-  json: requestData,
-};
-
-request(options, (error, response, body) => {
-  if (!error && response.statusCode === 200) {
-    console.log('Broadcast message sent successfully:', body);
-  } else {
-    console.error('Error sending broadcast message:', error);
-  }
-});
-
-
 app.use(bodyParser.json());
 
 app.set('port', process.env.PORT || 4000);
@@ -58,8 +32,8 @@ app.post('/webhook', (req, res) => {
 
   } else if (text === 'website') {
     console.log('Received command: website');
-    //website
-    sendText(sender, 'Here this is our website: http://thermoguard.spaceac.net/');
+    // Website
+    sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
 
   } else if (text === 'risk level' || text === 'risklevel' || text === 'risk') {
     console.log('Received command: risk level');
@@ -68,11 +42,6 @@ app.post('/webhook', (req, res) => {
     CheckForRiskLvlChanges('Device3');
     // Add more devices as needed
     sendText(sender, 'Checking for risk level changes...');
-    if (RiskLvlIndex === -1) {
-      sendText(globalSender, 'There no data at the moment ' + DeviceNum);
-      return;
-    }
-
   } else {
     // Other
     sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
@@ -81,9 +50,8 @@ app.post('/webhook', (req, res) => {
   res.sendStatus(200);
 });
 
-function TextAll(broadcast, text) {
+function TextAll(text) {
   const data = {
-    to: broadcast,
     messages: [
       {
         type: 'text',
@@ -91,6 +59,25 @@ function TextAll(broadcast, text) {
       },
     ],
   };
+
+  const options = {
+    url: 'https://api.line.me/v2/bot/message/broadcast',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CH_ACCESS_TOKEN}`,
+      'X-Line-Retry-Key': LINE_RETRY_KEY,
+    },
+    json: data,
+  };
+
+  request(options, (error, response, body) => {
+    if (!error && response.statusCode === 200) {
+      console.log('Broadcast message sent successfully:', body);
+    } else {
+      console.error('Error sending broadcast message:', error);
+    }
+  });
 }
 
 function sendText(sender, text) {
@@ -165,37 +152,34 @@ function RiskLvlChecker(DeviceNum) {
       const dataArray = data.split('\n').map((row) => row.split(','));
       const headers = dataArray[0].map((header) => header.replace(/"/g, ''));
 
-      // Find the index of the "Column 10" header
+      // Find the index of the "RiskLV" header
       const RiskLvlIndex = headers.indexOf('RiskLV');
 
-      //if (RiskLvlIndex === -1) {
-        //console.log(globalSender, 'Column 10 not found in Google Sheet for ' + DeviceNum);
-        //return;
-     // }
+      if (RiskLvlIndex === -1) {
+        sendText(globalSender, 'Column RiskLV not found in Google Sheet for ' + DeviceNum);
+        return;
+      }
 
       const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
       const oldValue = dataArray[2][RiskLvlIndex];
 
       if (newData[RiskLvlIndex] !== oldValue) {
-        // Value in Column 10 has changed
+        // Value in "RiskLV" column has changed
         const newValue = newData[RiskLvlIndex];
         const change = parseInt(newValue) - parseInt(oldValue);
-
-        // ... (previous code)
 
         let notificationMessage = '';
 
         if (change === 1) {
-          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม')
+          notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม';
         } else if (change === 2) {
-          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม')
-        }
-        else if (change === 3) {
-          notificationMessage = ('level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต')
+          notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม';
+        } else if (change === 3) {
+          notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต';
         }
 
         if (notificationMessage) {
-          TextAll(broadcast, notificationMessage + ' From ' + DeviceNum);
+          TextAll(notificationMessage + ' From ' + DeviceNum);
         }
       }
     })
