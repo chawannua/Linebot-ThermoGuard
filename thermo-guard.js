@@ -45,7 +45,7 @@ app.post('/webhook', (req, res) => {
     sendText(sender, notificationMessage);
     
   } else if (text === 'test') {
-  TextAll('test message');
+  TextAll(text,'test message');
   
   } else {
     // Other
