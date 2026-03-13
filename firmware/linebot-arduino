@@ -1,26 +1,15 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
-
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
-const char* mqtt_server = "mqtt://m15.cloudmqtt.com";
-const int mqtt_port = 18772;
-const char* mqtt_username = "wfcsvmqa";
-const char* mqtt_password = "IqpnVbyPDHqi";
+#include "config.h" // 🔴 ดึงการตั้งค่าทั้งหมดจากไฟล์ config.h มาใช้
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
-const char* esp32_name = "esp32_1"; // Change this for each ESP32 (esp32_1, esp32_2, esp32_3)
-const char* mqtt_topic = "/ESP32/";
 
 void setup() {
   Serial.begin(115200);
   setup_wifi();
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
-  String subscribeTopic = String(mqtt_topic) + esp32_name;
-  client.subscribe(subscribeTopic.c_str());
 }
 
 void loop() {
@@ -34,8 +23,9 @@ void setup_wifi() {
   delay(10);
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
+  Serial.println(ssid); // ดึงค่า ssid มาจาก config.h
+  WiFi.begin(ssid, password); // ดึงค่า password มาจาก config.h
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -47,7 +37,9 @@ void setup_wifi() {
 
 void callback(char* topic, byte* payload, unsigned int length) {
   String receivedTopic = String(topic);
-  if (receivedTopic.equals(mqtt_topic + esp32_name)) {
+  
+  // เช็คว่าหัวข้อตรงกับชื่อเครื่องเราไหม (ดึงค่า esp32_name จาก config.h)
+  if (receivedTopic.equals(String(mqtt_topic) + esp32_name)) {
     String command = "";
     for (int i = 0; i < length; i++) {
       command += (char)payload[i];
@@ -55,7 +47,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.println("Received command: " + command);
     
     if (command == "get_data") {
-      // Simulate sensor data - you should replace this with your actual sensor reading code
       float sensorValue = random(0, 100);
       String response = "Sensor data from " + String(esp32_name) + ": " + String(sensorValue);
       client.publish("/ESP32/response", response.c_str());
@@ -68,8 +59,11 @@ void reconnect() {
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     String clientId = "ESP32Client-" + String(random(0xffff), HEX);
+    
     if (client.connect(clientId.c_str(), mqtt_username, mqtt_password)) {
       Serial.println("connected");
+      String subscribeTopic = String(mqtt_topic) + esp32_name;
+      client.subscribe(subscribeTopic.c_str());
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
