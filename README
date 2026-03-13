@@ -1,11 +1,12 @@
 # ThermoGuard 🌡️🛡️
 **IoT Environmental Monitoring & Real-time Alert System via LINE**
 
-> 🏆 **Award-Winning Project:** **Gold Medalist** at the International Innovation Competition in Bali, Indonesia. 🇮🇩
+> 🏆 **Award-Winning Project:** **Gold Medalist** at the International Innovation Competition (Indonesia Inventors Day 2023 - IYIA). 🇮🇩
+> 🏫 **Developed by:** Astra Team, Assumption College, Thailand.
 
 > **⚠️ Disclaimer:** This code is for educational and exhibition project purposes only. Copyright remains to our team.
 
-ThermoGuard is an intelligent monitoring system designed to track environmental risks (such as temperature or heat index) using ESP32 devices. It integrates a **Node.js backend** with the **LINE Messaging API** to provide users with on-demand data retrieval and automated safety notifications.
+ThermoGuard is an intelligent, award-winning monitoring system designed to track environmental risks (such as temperature, humidity, PM2.5, and heat index) using ESP32 devices. It integrates a **Node.js backend** with the **LINE Messaging API** to provide users with on-demand data retrieval and automated safety notifications, aiming to prevent heatstroke fatalities amid escalating global temperatures.
 
 ---
 
@@ -43,6 +44,13 @@ The system operates through a seamless integration of hardware and cloud service
 
 ---
 
-## 👤 Author
-* **Chawan (Nuea)** - *Computer Engineering Student*
-* GitHub: [@chawannua](https://github.com/chawannua)
+## 👥 The Astra Team (Assumption College)
+This project was conceptualized and developed by:
+* **Mr. Chawan Thephasdin Na Ayuthaya (Nuea)** - *Lead Developer / GitHub: [@chawannua](https://github.com/chawannua)*
+* **Mr. Chantararat Cha-Emchan**
+* **Mr. Sirisart Anantasak**
+* **Mr. Papawin Sutdhiraksa**
+* **Mr. Sarawin Damrongratnuwong**
+
+---
+*Dedicated to leveraging IoT and ICT for public health and safety.*
