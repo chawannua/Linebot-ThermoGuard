@@ -2,255 +2,156 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const app = express();
-var olddata = 0;
-const checkInterval = 60000; // 1 minute
-let globalSender; // Define a global variable to store the sender
 
-// Your Channel access token (long-lived)
-const CH_ACCESS_TOKEN = '7nntV9CadnWw54gO9B+lAJTF1Ap4RF5lCJatqOLRrzHZO0wrSewxnSh8bV9kJSHf0xuwIPW5gw+08gH3W3nVK6KuDW9AB6ctP5SxleybdphHk4klApt8z68dp2OXcliJ27pXppy4Un4cx7j8DTXraAdB04t89/1O/w1cDnyilFU=';
-const LINE_RETRY_KEY = 'your_retry_key'; // Generate a unique UUID
+require('dotenv').config(); // เพิ่มบรรทัดนี้ไว้บนสุดเพื่อดึงค่าจากไฟล์ .env
 
-app.use(bodyParser.json());
+const express = require('express');
+const bodyParser = require('body-parser');
+
+
+
+// --- CONFIGURATION ---
+// ดึง Token จากไฟล์ .env (อย่าลืมสร้างไฟล์ .env และใส่ LINE_ACCESS_TOKEN ลงไปนะครับ)
+const CH_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN || 'ใส่_TOKEN_ชั่วคราวเพื่อเทสตรงนี้ก่อนได้ครับ';
+const checkInterval = 60000; // เช็คทุกๆ 1 นาที (60,000 ms)
+
+// เก็บสถานะ Risk Level แยกระบบกัน เพื่อไม่ให้ค่ามันตีกันเอง
+let lastRiskLevels = {
+  'Device1': 0,
+  'Device2': 0,
+  'Device3': 0
+};
 
 app.set('port', process.env.PORT || 4000);
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+// --- WEBHOOK RECEIVER (รับคำสั่งจากผู้ใช้) ---
 app.post('/webhook', (req, res) => {
-  const text = req.body.events[0].message.text.toLowerCase();
-  const sender = req.body.events[0].source.userId;
-  globalSender = sender; // Store the sender in the global variable
-  const replyToken = req.body.events[0].replyToken;
-  console.log('Received Line message:', text, 'from sender:', sender);
+  if (!req.body.events || req.body.events.length === 0) return res.sendStatus(200);
 
-  if (text === 'system1' || text === 'system2' || text === 'system3') {
-    // Determine the target ESP32 based on the received text
-    const espDevice = 'Device' + text.charAt(text.length - 1);
-    // Send the corresponding command to the MQTT topic
-    console.log('Received command:', text);
-    sendText(sender, 'Sending a command to request data from ' + espDevice + '...');
-    getDataFromGoogleSheet(espDevice);
+  const event = req.body.events[0];
+  if (event.type !== 'message' || event.message.type !== 'text') return res.sendStatus(200);
+
+  const text = event.message.text.toLowerCase();
+  const sender = event.source.userId; // รับ ID ของคนที่พิมพ์มา
+  
+  console.log(`Received command: [${text}] from User: ${sender}`);
+
+  if (text.startsWith('system')) {
+    const deviceNum = 'Device' + text.charAt(text.length - 1);
+    sendText(sender, `กำลังดึงข้อมูลล่าสุดจาก ${deviceNum} ครับ...`);
+    getDataFromGoogleSheet(deviceNum, sender);
 
   } else if (text === 'website') {
-    console.log('Received command: website');
-    // Website
-    sendText(sender, 'Here is our website: http://thermoguard.spaceac.net/');
+    sendText(sender, 'ดู Dashboard แบบเต็มได้ที่: http://thermoguard.spaceac.net/');
 
-  } else if (text === 'risk level' || text === 'risklevel' || text === 'risk') {
-    console.log('Received command: risk level');
-    CheckForRiskLvlChanges('Device1');
-    CheckForRiskLvlChanges('Device2');
-    CheckForRiskLvlChanges('Device3');
-    // Add more devices as needed
-    sendText(sender, 'Checking for risk level changes...');
-    sendText(sender, notificationMessage);
+  } else if (text === 'risk' || text === 'risk level') {
+    sendText(sender, 'กำลังตรวจสอบระดับความเสี่ยงของทุกระบบ...');
+    ['Device1', 'Device2', 'Device3'].forEach(d => RiskLvlChecker(d));
     
-  } else if (text === 'test') {
-  TextAll(text,'test message');
-  sendBroadcastToUser('Ud61051a9f069c83edeb9b887dcf9d78f', 'This is a test broadcast message to a single user.');
-  
   } else {
-    // Other
-    sendText(sender, 'Please use the menu command or "system1," "system2," "system3" or "risk level" command to control the ESP32 devices. For more info, visit http://thermoguard.spaceac.net/');
+    sendText(sender, 'พิมพ์คำสั่งไม่ถูกต้องครับ ลองพิมพ์:\n- system1 (เพื่อดูข้อมูลเครื่อง 1)\n- system2\n- system3\n- risk level\n- website');
   }
 
   res.sendStatus(200);
 });
 
-function TextAll(text) {
-  const data = {
-    messages: [
-      {
-        type: 'text',
-        text: text,
-      },
-    ],
-  };
+// --- FUNCTIONS ---
 
-  const options = {
+// ส่งข้อความกลับไปหาคนที่พิมพ์ถามมา (1 ต่อ 1)
+function sendText(to, text) {
+  request({
+    url: 'https://api.line.me/v2/bot/message/push',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${CH_ACCESS_TOKEN}`
+    },
+    body: { to, messages: [{ type: 'text', text }] },
+    json: true
+  }, (err, res, body) => {
+    if (err) console.error('Push Error:', err);
+  });
+}
+
+// ยิงข้อความแจ้งเตือนหา "ทุกคน" ที่แอดบอท (Broadcast)
+function broadcastText(text) {
+  request({
     url: 'https://api.line.me/v2/bot/message/broadcast',
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${CH_ACCESS_TOKEN}`,
-      'X-Line-Retry-Key': LINE_RETRY_KEY,
+      'Authorization': `Bearer ${CH_ACCESS_TOKEN}`
     },
-    json: data,
-  };
-
-  //const requestData = {
-  //  to: ['@all'], // Send the broadcast message to all users
-  // messages: [
-  //    {
-  //      type: 'text',
-  //      text: text,
-  //    },
-  //  ],
-  //};
-
-  request(options, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      console.log('Broadcast message sent successfully:', body);
-    } else {
-      console.error('Error sending broadcast message:', error);
-    }
+    body: { messages: [{ type: 'text', text }] },
+    json: true
+  }, (err, res, body) => {
+    if (err) console.error('Broadcast Error:', err);
+    else console.log('Broadcast sent successfully!');
   });
 }
 
-function sendText(sender, text) {
-  const data = {
-    to: sender,
-    messages: [
-      {
-        type: 'text',
-        text: text,
-      },
-    ],
-  };
+// ดึงข้อมูลรายเครื่องจาก Google Sheet
+function getDataFromGoogleSheet(DeviceNum, targetSender) {
+  const url = `https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=${DeviceNum}`;
+  
+  fetch(url)
+    .then(res => res.text())
+    .then(data => {
+      const rows = data.split('\n').map(row => row.split(','));
+      let msg = `📊 สถานะ ${DeviceNum}:\n`;
+      
+      for (let i = 2; i <= 9; i++) {
+        if (rows[0][i]) {
+          msg += `${rows[0][i].replace(/"/g,'')} : ${rows[1][i].replace(/"/g,'')}\n`;
+        }
+      }
+      sendText(targetSender, msg);
+    })
+    .catch(err => sendText(targetSender, `ขออภัย ไม่สามารถดึงข้อมูล ${DeviceNum} ได้ในขณะนี้`));
+}
 
-  request(
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + CH_ACCESS_TOKEN,
-      },
-      url: 'https://api.line.me/v2/bot/message/push',
-      method: 'POST',
-      body: data,
-      json: true,
-    },
-    (err, res, body) => {
-      if (err) {
-        console.log('Error sending Line message:', err);
-      } else {
-        console.log('Successfully sent Line message:', body);
+// ระบบตรวจสอบและแจ้งเตือนอัตโนมัติ (Automated Alert)
+function RiskLvlChecker(DeviceNum) {
+  const url = `https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=${DeviceNum}`;
+  
+  fetch(url).then(res => res.text()).then(data => {
+    const rows = data.split('\n').map(row => row.split(','));
+    const currentRisk = parseInt(rows[1][9].replace(/"/g, '')); // ดึงค่า Risk Level จากคอลัมน์ที่ 9
+    const oldRisk = lastRiskLevels[DeviceNum];
+
+    // ถ้าค่าระดับความเสี่ยงเปลี่ยนไปจากเดิม
+    if (currentRisk !== oldRisk) {
+      lastRiskLevels[DeviceNum] = currentRisk; // อัปเดตค่าใหม่เก็บไว้
+      
+      let alertMsg = '';
+      
+      // เงื่อนไขแจ้งเตือนที่คุณเคยเขียนไว้ นำมาปรับใช้ให้ทำงานได้จริง
+      if (currentRisk === 1) {
+        alertMsg = `⚠️ [${DeviceNum}] แจ้งเตือนระดับ 1:\nเริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม (ค่าขยับจาก ${oldRisk} เป็น ${currentRisk})`;
+      } else if (currentRisk === 2) {
+        alertMsg = `🚨 [${DeviceNum}] แจ้งเตือนระดับ 2:\nอันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม (ค่าขยับจาก ${oldRisk} เป็น ${currentRisk})`;
+      } else if (currentRisk >= 3) {
+        alertMsg = `🆘 [${DeviceNum}] แจ้งเตือนระดับ 3 (วิกฤต):\nอันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความปลอดภัยในชีวิต! (ค่าขยับจาก ${oldRisk} เป็น ${currentRisk})`;
+      }
+
+      // ถ้ามีข้อความแจ้งเตือน ให้ทำการ Broadcast หาทุกคน
+      if (alertMsg !== '') {
+        console.log(`Triggering Broadcast for ${DeviceNum} - Risk: ${currentRisk}`);
+        broadcastText(alertMsg);
       }
     }
-  );
+  }).catch(err => console.error(`Risk Checker Error on ${DeviceNum}:`, err));
 }
 
-function getDataFromGoogleSheet(DeviceNum) {
-  const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
-  console.log(googleSheetURL);
-  fetch(googleSheetURL)
-    .then((response) => response.text())
-    .then((data) => {
-      const dataArray = data.split('\n').map((row) => row.split(','));
-      var responseText = "Data for " + DeviceNum + ":\n\n";
-      for (let index = 0; index < dataArray[1].length; index++) {
-        if (index > 9) {
-          break;
-        }
-        if (index >= 2) {
-          responseText += dataArray[0][index].replace(/"/g,'') + " : " + dataArray[1][index].replace(/"/g,'') + "\n";
-        }
-      }
-      sendText(globalSender, responseText);
-    })
-    .catch((error) => {
-      console.error(error);
-      sendText(globalSender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
-    });
-}
-
-function CheckForRiskLvlChanges(DeviceNum) {
-  // Call RiskLvlChecker for each device and provide the correct device name as the first argument
-  RiskLvlChecker(DeviceNum);
-  // Schedule the next check
-  setTimeout(() => CheckForRiskLvlChanges(DeviceNum), checkInterval);
-}
-
-function RiskLvlChecker(DeviceNum) {
-  const googleSheetURL = 'https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=' + DeviceNum;
-  console.log(googleSheetURL);
-  fetch(googleSheetURL)
-    .then((response) => response.text())
-    .then((data) => {
-
-      
-      const dataArray = data.split('\n').map((row) => row.split(','));
-      console.log(dataArray[1][9] + " " + DeviceNum);
-      const theval = dataArray[1][9].replace(/"/g, '');
-      
-      if (theval !== olddata) {
-        console.log("changed");
-        olddata = theval;
-        var textdatalv = parseInt(theval);
-        if (textdatalv >= 5) {
-          notificationMessage = 'Level change from ' + theval + ' to ' + olddata + ' test funni';
-          TextAll(notificationMessage, globalSender); // Provide both arguments here
-        }
-
-        
-        
-        // if (textdatalv == 1) {
-        //   notificationMessage = 'Level change from ' + textdatalv + ' to ' + olddata + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม';
-        // } else if (textdatalv == 2) {
-        //   notificationMessage = 'Level change from ' + textdatalv + ' to ' + olddata + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม';
-        // } else if (textdatalv == 3) {
-        //   notificationMessage = 'Level change from ' + textdatalv + ' to ' + olddata + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต';
-        // }
-      }
-
-      // Old code
-      // const dataArray = data.split('\n').map((row) => row.split(','));
-      
-
-      // // Find the index of the "RiskLV" header
-      // const RiskLvlIndex = headers.indexOf('RiskLV');
-
-      // if (RiskLvlIndex === -1) {
-      //   sendText(globalSender, 'Column RiskLV not found in Google Sheet for ' + DeviceNum);
-      //   return;
-      // }
-
-      // const newData = dataArray[1].map((value) => value.replace(/"/g, ''));
-      // const oldValue = newData;
-
-      // if (newData[RiskLvlIndex] !== oldValue) {
-      //   // Value in "RiskLV" column has changed
-      //   const newValue = newData[RiskLvlIndex];
-      //   const change = parseInt(newValue) - parseInt(oldValue);
-
-      //   let notificationMessage = '';
-        
-      //   if (change === 1) {
-      //     notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' เริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม';
-      //   } else if (change === 2) {
-      //     notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม';
-      //   } else if (change === 3) {
-      //     notificationMessage = 'Level change from ' + newValue + ' to ' + oldValue + ' อันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความโปรดภัยในชีวิต';
-      //   }
-
-      //   if (notificationMessage) {
-      //     TextAll(notificationMessage, globalSender); // Provide both arguments here
-      //   }
-      // }
-    })
-  
-    .catch((error) => {
-      console.error(error);
-      sendText(globalSender, 'Error retrieving data from Device ' + DeviceNum + '. Please try again later');
-    });
-}
-
-function sendBroadcastToUser(userId, text) {
-  console.log('Broadcast message sent successfully:',);
-  const data = {
-    messages: [
-      {
-        type: 'text',
-        text: text,
-      },
-    ],
-  };}
-
-
+// --- START SERVER & AUTOMATION ---
 app.listen(app.get('port'), () => {
-  console.log('Node app is running on port', app.get('port'));
-  // Start checking for risk level changes initially
-  CheckForRiskLvlChanges('Device1');
-  CheckForRiskLvlChanges('Device2');
-  CheckForRiskLvlChanges('Device3');
-  // Add more devices as needed
+  console.log('ThermoGuard Server is running on port', app.get('port'));
+  
+  // เริ่มลูปตรวจสอบความเสี่ยงทุกๆ 1 นาที
+  console.log(`Starting automated risk checker every ${checkInterval / 1000} seconds...`);
+  setInterval(() => {
+    ['Device1', 'Device2', 'Device3'].forEach(d => RiskLvlChecker(d));
+  }, checkInterval);
 });

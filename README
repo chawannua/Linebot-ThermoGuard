@@ -1,0 +1,44 @@
+# ThermoGuard 🌡️🛡️
+**IoT Environmental Monitoring & Real-time Alert System via LINE**
+
+ThermoGuard is an intelligent monitoring system designed to track environmental risks (such as temperature or heat index) using ESP32 devices. It integrates a **Node.js backend** with the **LINE Messaging API** to provide users with on-demand data retrieval and automated safety notifications.
+
+---
+
+## 🛰️ System Architecture
+The system operates through a seamless integration of hardware and cloud services:
+1. **Edge Devices:** ESP32 sensors collect environmental data and transmit it via MQTT.
+2. **Data Storage:** Google Sheets acts as a lightweight, accessible database for logging sensor values.
+3. **Backend Server:** A Node.js application (Express) handles Webhooks from LINE and processes risk logic.
+4. **User Interface:** A LINE Bot serves as the primary GCS (Ground Control Station) for users to interact with the devices.
+
+---
+
+## ✨ Key Features
+- **Real-time Data Query:** Users can request live data from specific devices (`system1`, `system2`, `system3`) directly through the LINE chat.
+- **Automated Risk Alerts:** The system monitors "Risk Levels" every minute and sends **Broadcast Notifications** to all users if conditions become hazardous.
+- **Cloud Integration:** Fetches and parses CSV data from Google Sheets in real-time to ensure the latest information is always available.
+- **Scalable Architecture:** Built to support multiple devices with independent risk assessment logic.
+
+---
+
+## 🛠️ Tech Stack
+- **Backend:** Node.js, Express.js
+- **API Integration:** LINE Messaging API (Push / Broadcast)
+- **Data Processing:** CSV Parsing, Google Visualization API (Google Sheets)
+- **Messaging Protocol:** MQTT for device communication
+- **Security:** Managed environment variables (`.env`) for secure Token handling.
+
+---
+
+## 🛡️ Cybersecurity Considerations
+*In alignment with my focus on system security:*
+- **Token Management:** Implements secure environment variables (`dotenv`) for Channel Access Tokens to prevent credential leaks.
+- **Input Validation:** Sanitizes incoming Webhook events.
+- **State Management:** Fixed concurrency issues by mapping states independently to prevent broadcast errors.
+
+---
+
+## 👤 Author
+* **Chawan (Nuea)** - *Computer Engineering Student*
+* GitHub: [@chawannua](https://github.com/chawannua)
