@@ -1,6 +1,10 @@
 # ThermoGuard 🌡️🛡️
 **IoT Environmental Monitoring & Real-time Alert System via LINE**
 
+> 🏆 **Award-Winning Project:** **Gold Medalist** at the International Innovation Competition in Bali, Indonesia. 🇮🇩
+
+> **⚠️ Disclaimer:** This code is for educational and exhibition project purposes only. Copyright remains to our team.
+
 ThermoGuard is an intelligent monitoring system designed to track environmental risks (such as temperature or heat index) using ESP32 devices. It integrates a **Node.js backend** with the **LINE Messaging API** to provide users with on-demand data retrieval and automated safety notifications.
 
 ---
