@@ -3,6 +3,7 @@ require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
+const mqtt = require('mqtt');
 const app = express();
 
 // --- CONFIGURATION ---
@@ -10,12 +11,43 @@ const CH_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN || 'ใส่_TOKEN_ชั
 const CH_SECRET = process.env.LINE_CHANNEL_SECRET || '';
 const checkInterval = 60000; // เช็คทุกๆ 1 นาที (60,000 ms)
 
+// MQTT Config for Hardware Alerts
+const MQTT_SERVER = process.env.MQTT_SERVER || '';
+const MQTT_PORT = parseInt(process.env.MQTT_PORT || '18772', 10);
+const MQTT_USERNAME = process.env.MQTT_USERNAME || '';
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
+const MQTT_BROADCAST_TOPIC = process.env.MQTT_BROADCAST_TOPIC || '/ESP32/broadcast';
+
 // เก็บสถานะ Risk Level แยกระบบกัน เพื่อไม่ให้ค่ามันตีกันเอง
 let lastRiskLevels = {
   'Device1': 0,
   'Device2': 0,
   'Device3': 0
 };
+
+// Setup MQTT Client (if broker is configured)
+let mqttClient = null;
+if (MQTT_SERVER && MQTT_SERVER !== 'your_mqtt_broker_host') {
+  try {
+    const protocol = MQTT_PORT === 8883 ? 'mqtts' : 'mqtt';
+    mqttClient = mqtt.connect(`${protocol}://${MQTT_SERVER}:${MQTT_PORT}`, {
+      username: MQTT_USERNAME,
+      password: MQTT_PASSWORD,
+      reconnectPeriod: 5000,
+      connectTimeout: 5000
+    });
+
+    mqttClient.on('connect', () => {
+      console.log('Connected to MQTT Broker successfully!');
+    });
+
+    mqttClient.on('error', (err) => {
+      console.error('MQTT Client Error:', err.message);
+    });
+  } catch (err) {
+    console.error('Failed to initialize MQTT client:', err.message);
+  }
+}
 
 app.set('port', process.env.PORT || 4000);
 
@@ -28,6 +60,92 @@ app.use(bodyParser.json({
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // --- HELPER FUNCTIONS ---
+
+// Broadcast Heat Alert payload to all physical ESP32 hardware devices over MQTT
+function broadcastMqttAlert(deviceNum, currentRisk, alertMsg) {
+  if (!mqttClient || !mqttClient.connected) {
+    console.log(`MQTT not connected. Skipping hardware MQTT broadcast for ${deviceNum}.`);
+    return;
+  }
+
+  const broadcastTopic = MQTT_BROADCAST_TOPIC;
+  const signalMsg = `HEAT_ALERT:${currentRisk}:${deviceNum}`;
+  
+  mqttClient.publish(broadcastTopic, signalMsg, { qos: 1 }, (err) => {
+    if (err) {
+      console.error(`MQTT Broadcast Error on ${broadcastTopic}:`, err);
+    } else {
+      console.log(`📢 Published Heat Alert to MQTT broadcast topic: ${broadcastTopic} (${signalMsg})`);
+    }
+  });
+
+  const deviceTopic = `/ESP32/${deviceNum.toLowerCase()}`;
+  const payload = JSON.stringify({
+    event: 'HEAT_ALERT',
+    device: deviceNum,
+    riskLevel: currentRisk,
+    message: alertMsg,
+    timestamp: new Date().toISOString()
+  });
+
+  mqttClient.publish(deviceTopic, payload, { qos: 1 }, (err) => {
+    if (err) console.error(`MQTT Device Publish Error on ${deviceTopic}:`, err);
+  });
+}
+
+// Fetch single device status from Google Sheets
+async function fetchDeviceSummary(DeviceNum) {
+  const url = `https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=${DeviceNum}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.text();
+
+    if (data.trim().startsWith('<') || data.includes('<!DOCTYPE html>') || data.includes('<html')) {
+      return { device: DeviceNum, ok: false, risk: lastRiskLevels[DeviceNum] || 0, details: 'ออนไลน์' };
+    }
+
+    const rows = parseCSV(data);
+    if (!rows[1] || rows.length < 2) {
+      return { device: DeviceNum, ok: false, risk: lastRiskLevels[DeviceNum] || 0, details: 'ข้อมูลไม่สมบูรณ์' };
+    }
+
+    const riskVal = parseInt(rows[1][9] ? rows[1][9].replace(/"/g, '').trim() : '0', 10);
+    const risk = isNaN(riskVal) ? (lastRiskLevels[DeviceNum] || 0) : riskVal;
+
+    let keyMetrics = [];
+    for (let i = 2; i <= 8; i++) {
+      if (rows[0] && rows[0][i] !== undefined && rows[1] && rows[1][i] !== undefined) {
+        const k = rows[0][i].replace(/"/g, '').trim();
+        const v = rows[1][i].replace(/"/g, '').trim();
+        if (k && v && !k.includes('{') && !k.includes(':') && k.length < 30) {
+          keyMetrics.push(`${k}: ${v}`);
+        }
+      }
+    }
+
+    return {
+      device: DeviceNum,
+      ok: true,
+      risk,
+      details: keyMetrics.slice(0, 3).join(' | ') || 'ปกติ'
+    };
+  } catch (err) {
+    return { device: DeviceNum, ok: false, risk: lastRiskLevels[DeviceNum] || 0, details: 'ไม่สามารถดึงข้อมูลได้' };
+  }
+}
+
+// Fetch and combine summary status across all 3 devices
+async function getAllDevicesStatusText() {
+  const devices = ['Device1', 'Device2', 'Device3'];
+  const results = await Promise.all(devices.map(fetchDeviceSummary));
+  
+  let summary = `📋 สถานะรวมทุกอุปกรณ์ในระบบ (All Devices Status):\n`;
+  results.forEach(r => {
+    const riskEmoji = r.risk === 0 ? '🟢' : r.risk === 1 ? '🟡' : r.risk === 2 ? '🟠' : '🆘';
+    summary += `${riskEmoji} ${r.device}: ระดับความเสี่ยง ${r.risk} (${r.details})\n`;
+  });
+  return summary.trim();
+}
 
 // Helper to safely parse CSV format from Google Sheets (handles quotes and commas gracefully)
 function parseCSV(text) {
@@ -69,6 +187,7 @@ app.get('/', (req, res) => {
   res.json({
     status: 'ok',
     service: 'ThermoGuard LINE Bot Backend',
+    mqttConnected: mqttClient ? mqttClient.connected : false,
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });
@@ -107,7 +226,9 @@ app.post('/webhook', (req, res) => {
       sendReply(replyToken, 'ดู Dashboard แบบเต็มได้ที่: http://thermoguard.spaceac.net/');
 
     } else if (text === 'risk' || text === 'risk level') {
-      sendReply(replyToken, 'กำลังตรวจสอบระดับความเสี่ยงของทุกระบบ...');
+      getAllDevicesStatusText().then(summaryText => {
+        sendReply(replyToken, summaryText);
+      });
       ['Device1', 'Device2', 'Device3'].forEach(d => RiskLvlChecker(d));
 
     } else {
@@ -221,18 +342,32 @@ function getDataFromGoogleSheet(DeviceNum, replyToken, targetSender) {
     });
 }
 
-// ระบบตรวจสอบและแจ้งเตือนอัตโนมัติ (Automated Alert)
+// ระบบตรวจสอบและแจ้งเตือนอัตโนมัติ (Automated Heat Index & Risk Alert)
 function RiskLvlChecker(DeviceNum) {
   const url = `https://docs.google.com/spreadsheets/d/1MkCIXPtFRnHyluy9qfIZXl2MzLan5zm_2iAHLcF4b4A/gviz/tq?tqx=out:csv&sheet=${DeviceNum}`;
   
   fetch(url)
     .then(res => res.text())
-    .then(data => {
+    .then(async data => {
       const rows = parseCSV(data);
       if (!rows[1] || !rows[1][9]) return;
 
       const currentRisk = parseInt(rows[1][9].replace(/"/g, '').trim(), 10);
       if (isNaN(currentRisk)) return;
+
+      // Extract Heat Index value if present in spreadsheet columns
+      let heatIndexVal = null;
+      if (rows[0] && rows[1]) {
+        for (let c = 0; c < rows[0].length; c++) {
+          const colHeader = rows[0][c] ? rows[0][c].replace(/"/g, '').trim().toLowerCase() : '';
+          if (colHeader.includes('heat index') || colHeader.includes('ดัชนีความร้อน') || colHeader === 'hi') {
+            const val = parseFloat(rows[1][c] ? rows[1][c].replace(/"/g, '').trim() : '');
+            if (!isNaN(val)) {
+              heatIndexVal = val;
+            }
+          }
+        }
+      }
 
       const oldRisk = lastRiskLevels[DeviceNum];
 
@@ -241,21 +376,31 @@ function RiskLvlChecker(DeviceNum) {
         lastRiskLevels[DeviceNum] = currentRisk; // อัปเดตค่าใหม่เก็บไว้
         
         let alertMsg = '';
+        const hiText = heatIndexVal !== null ? ` (ค่า Heat Index: ${heatIndexVal}°C)` : '';
         
         if (currentRisk === 1) {
-          alertMsg = `⚠️ [${DeviceNum}] แจ้งเตือนระดับ 1:\nเริ่มมีอันตราย โปรดระมัดระวังในการทำกิจกรรม (ค่าขยับจาก ${oldRisk} เป็น ${currentRisk})`;
+          alertMsg = `⚠️ [${DeviceNum}] แจ้งเตือนความเสี่ยงดัชนีความร้อน ระดับ 1:\nเริ่มมีอันตราย${hiText} โปรดระมัดระวังในการทำกิจกรรม (ระดับ ${oldRisk} ➡️ ${currentRisk})`;
         } else if (currentRisk === 2) {
-          alertMsg = `🚨 [${DeviceNum}] แจ้งเตือนระดับ 2:\nอันตรายเพิ่มขึ้น โปรดระมัดระวังในการทำกิจกรรม (ค่าขยับจาก ${oldRisk} เป็น ${currentRisk})`;
+          alertMsg = `🚨 [${DeviceNum}] แจ้งเตือนความเสี่ยงดัชนีความร้อน ระดับ 2:\nอันตรายเพิ่มขึ้น${hiText} โปรดระมัดระวังในการทำกิจกรรม (ระดับ ${oldRisk} ➡️ ${currentRisk})`;
         } else if (currentRisk >= 3) {
-          alertMsg = `🆘 [${DeviceNum}] แจ้งเตือนระดับ 3 (วิกฤต):\nอันตรายมากๆ โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความปลอดภัยในชีวิต! (ค่าขยับจาก ${oldRisk} เป็น ${currentRisk})`;
+          alertMsg = `🆘 [${DeviceNum}] แจ้งเตือนความเสี่ยงดัชนีความร้อน ระดับ 3 (วิกฤต/เกินเกณฑ์มาตรฐาน):\nอันตรายมากๆ${hiText} โปรดเข้าที่ร่มหรือที่หลบพักเพื่อความปลอดภัย! (ระดับ ${oldRisk} ➡️ ${currentRisk})`;
         } else if (currentRisk === 0 && oldRisk > 0) {
-          alertMsg = `✅ [${DeviceNum}] สถานะกลับสู่ภาวะปกติ (ระดับ 0):\nความเสี่ยงลดลงเรียบร้อยแล้ว`;
+          alertMsg = `✅ [${DeviceNum}] สถานะดัชนีความร้อนกลับสู่ภาวะปกติ (ระดับ 0):\nความเสี่ยงลดลงเรียบร้อยแล้ว`;
         }
 
-        // ถ้ามีข้อความแจ้งเตือน ให้ทำการ Broadcast หาทุกคน
+        // ถ้ามีข้อความแจ้งเตือน ให้ทำการ Broadcast หาทุกคนที่แอดเพื่อนบอท LINE นี้ไว้
         if (alertMsg !== '') {
-          console.log(`Triggering Broadcast for ${DeviceNum} - Risk: ${currentRisk}`);
-          broadcastText(alertMsg);
+          console.log(`Triggering LINE Broadcast for ${DeviceNum} - Risk: ${currentRisk}, HI: ${heatIndexVal}`);
+
+          // Fetch summary of all devices to announce total status
+          const summaryText = await getAllDevicesStatusText();
+          const combinedMsg = `📢 [HEAT ALERT BROADCAST - แจ้งเตือนสมาชิกทุกคน]\n${alertMsg}\n\n====================\n${summaryText}`;
+
+          // LINE Broadcast to all users who added this LINE Official Account as a friend
+          broadcastText(combinedMsg);
+
+          // MQTT Hardware Broadcast to all ESP32 devices
+          broadcastMqttAlert(DeviceNum, currentRisk, alertMsg);
         }
       }
     })
@@ -276,6 +421,7 @@ const server = app.listen(app.get('port'), () => {
   const shutdown = (signal) => {
     console.log(`Received ${signal}. Shutting down gracefully...`);
     clearInterval(riskInterval);
+    if (mqttClient) mqttClient.end();
     server.close(() => {
       console.log('HTTP server closed.');
       process.exit(0);
