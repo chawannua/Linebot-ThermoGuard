@@ -1,1 +1,1 @@
-web: node thermo-guard.js
+web: gunicorn line-bot:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
